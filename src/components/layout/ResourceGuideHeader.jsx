@@ -1,18 +1,27 @@
+import { Bars3Icon } from "@heroicons/react/24/solid";
+
 export default function ResourceGuideHeader({ onMenu }) {
   return (
-    <header className="fixed top-0 z-50 w-full h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-      <div className="font-semibold text-lg">
-        CASA Worcester Resource Guide
-      </div>
+    <header className="fixed top-0 z-50 w-full bg-brand-blue">
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+        {/* Logo only */}
+        <img
+          src="/casa-logo-light.png"
+          alt="CASA Worcester"
+          className="h-8 w-auto"
+        />
 
-      <button
-        type="button"
-        onClick={onMenu}
-        className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300"
-        aria-label="Open menu"
-      >
-        ☰
-      </button>
+        {/* Hamburger */}
+        <button
+          type="button"
+          onClick={onMenu}
+          className="p-0 text-brand-white hover:opacity-90"
+          aria-label="Open menu"
+          title="Open menu"
+        >
+          <Bars3Icon className="h-8 w-8" aria-hidden="true" />
+        </button>
+      </div>
     </header>
   );
 }

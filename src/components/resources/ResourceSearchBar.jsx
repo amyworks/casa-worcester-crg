@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
 
-export default function ResourceSearchBar({ onSearch, placeholder = "Search resources" }) {
+export default function ResourceSearchBar({
+  onSearch,
+  placeholder = "Search",
+}) {
   const [query, setQuery] = useState("");
 
   const submit = (e) => {
@@ -12,19 +16,22 @@ export default function ResourceSearchBar({ onSearch, placeholder = "Search reso
 
   return (
     <form onSubmit={submit} className="w-full max-w-xl">
-      <div className="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 shadow-sm">
+      <div className="h-[60px] flex items-center gap-3 rounded-full border border-brand-gray bg-brand-white px-4">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          className="w-full bg-transparent outline-none text-base"
+          className="flex-1 bg-transparent font-medium text-brand-blue placeholder:text-brand-gray outline-none"
           aria-label="Search resources"
         />
+
         <button
           type="submit"
-          className="rounded-full px-4 py-2 text-sm font-semibold bg-gray-900 text-white hover:bg-gray-800"
+          className="p-0 text-brand-red hover:text-brand-red-hover"
+          aria-label="Search"
+          title="Search"
         >
-          Search
+          <MagnifyingGlassIcon className="h-6 w-6" aria-hidden="true" />
         </button>
       </div>
     </form>
