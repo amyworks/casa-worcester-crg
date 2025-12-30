@@ -7,7 +7,7 @@ export default function ResourceGuideLayout() {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen font-sans bg-white">
       <ResourceGuideHeader onMenu={() => setNavOpen(true)} />
       <ResourceGuideNavigation open={navOpen} onClose={() => setNavOpen(false)} />
 
