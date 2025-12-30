@@ -1,5 +1,5 @@
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
-import { db } from "./config";
+import { db } from "./firebase";
 
 export const getResources = async () => {
   const snapshot = await getDocs(collection(db, "resources"));
