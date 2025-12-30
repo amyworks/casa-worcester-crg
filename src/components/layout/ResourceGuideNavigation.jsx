@@ -5,11 +5,10 @@ export default function ResourceGuideNavigation({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-brand-blue text-brand-white">
+    <div className="fixed inset-0 z-[60] h-screen bg-brand-blue text-brand-white">
       <div className="mx-auto flex h-full max-w-5xl flex-col px-6 pt-6">
-        <div className="flex items-center justify-between">
-          <div className="text-lg font-bold">Menu</div>
-
+        {/* Top row: close button only */}
+        <div className="flex items-center justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -21,6 +20,7 @@ export default function ResourceGuideNavigation({ open, onClose }) {
           </button>
         </div>
 
+        {/* Main nav links */}
         <nav className="mt-10 flex flex-col gap-6">
           <Link to="/search" onClick={onClose} className="text-3xl font-bold">
             Search
@@ -34,16 +34,25 @@ export default function ResourceGuideNavigation({ open, onClose }) {
           <Link to="/signin" onClick={onClose} className="text-3xl font-bold">
             Sign In
           </Link>
-
-          <a
-            href="https://www.thecasaproject.org/"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 text-xl font-normal underline underline-offset-4"
-          >
-            CASA Website
-          </a>
         </nav>
+
+        {/* Footer pinned to bottom of the PAGE (viewport) */}
+        <div className="mt-auto pt-6 pb-[50px]">
+          <p className="underline">
+            <Link to="/privacy" onClick={onClose}>
+              Privacy Policy
+            </Link>
+          </p>
+          <p className="pb-[50px] underline">
+            <Link to="/terms" onClick={onClose}>
+              Terms & Conditions
+            </Link>
+          </p>
+          <p>Nonprofit EIN: 04-2711865</p>
+          <p>
+            Copyright &copy; {new Date().getFullYear()} CASA Project Worcester County. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   );
