@@ -5,14 +5,16 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-brand-blue text-brand-white font-sans">
+    <div className="-mt-20 min-h-screen pt-20 bg-brand-blue text-brand-white font-sans">
       <div className="mx-auto max-w-xl px-6 pt-10 text-center">
-        <h1 className="text-5xl font-bold leading-[1.05]">
-          CASA Worcester
-          <br />
-          Community
-          <br />
-          Resource Guide
+        <h1 className="leading-[1.05]">
+          <span className="text-xl font-medium">CASA Project Worcester</span>
+          <div className="h-[30px]" />
+          <span className="text-5xl font-bold">
+            Community
+            <br />
+            Resource Guide
+          </span>
         </h1>
 
         <div className="mt-10">
