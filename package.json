@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "import:resources": "node --env-file=.env.local scripts/import-resources.js",
     "init:admins": "node --env-file=.env.local scripts/init-admin-users.js",
-    "update:regions": "node --env-file=.env.local scripts/updateRegionNames.js"
+    "update:regions": "node --env-file=.env.local scripts/updateRegionNames.js",
+    "export:resources": "node --env-file=.env.local scripts/export-resources.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
