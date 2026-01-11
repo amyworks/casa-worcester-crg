@@ -197,3 +197,38 @@ export const getManagers = async () => {
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
+
+// Case management functions (for CASA volunteers)
+export const createCase = async (userId) => {
+  const casesRef = collection(db, "users", userId, "cases");
+  return await addDoc(casesRef, {
+    familyMembers: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+export const getCases = async (userId) => {
+  const casesRef = collection(db, "users", userId, "cases");
+  const snapshot = await getDocs(casesRef);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const getCase = async (userId, caseId) => {
+  const caseDoc = await getDoc(doc(db, "users", userId, "cases", caseId));
+  if (caseDoc.exists()) {
+    return { id: caseDoc.id, ...caseDoc.data() };
+  }
+  return null;
+};
+
+export const updateCase = async (userId, caseId, updates) => {
+  return await updateDoc(doc(db, "users", userId, "cases", caseId), {
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+export const deleteCase = async (userId, caseId) => {
+  return await deleteDoc(doc(db, "users", userId, "cases", caseId));
+};

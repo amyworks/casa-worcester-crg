@@ -22,6 +22,11 @@ export default function ResourceGuideNavigation({ open, onClose, user, userRecor
   const canAccessAdmin = userRecord?.isApproved &&
     ["admin", "manager", "contributor"].includes(userRecord?.role);
 
+  // Check if user can access case management (CASA volunteers with assigned cases)
+  const hasCaseAccess = userRecord?.isApproved &&
+    userRecord?.isCasaVolunteer &&
+    userRecord?.hasAssignedCase;
+
   if (!open) return null;
 
   return (
@@ -81,6 +86,11 @@ export default function ResourceGuideNavigation({ open, onClose, user, userRecor
           {user && (
             <Link to="/saved" onClick={onClose} className="text-3xl font-bold">
               Saved Resources
+            </Link>
+          )}
+          {hasCaseAccess && (
+            <Link to="/my-case" onClick={onClose} className="text-3xl font-bold">
+              My Case
             </Link>
           )}
           <Link to="/search" onClick={onClose} className="text-3xl font-bold">

@@ -1,0 +1,1003 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { getCases, createCase, updateCase } from "../firebase/firestore";
+import FamilyMemberForm from "../components/cases/FamilyMemberForm";
+import CaseNoteForm from "../components/cases/CaseNoteForm";
+import {
+  PlusIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  UserGroupIcon,
+  DocumentTextIcon,
+  ClipboardDocumentListIcon,
+  ExclamationTriangleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@heroicons/react/24/solid";
+
+// Case-level dropdown options
+const DCF_INVOLVEMENT_OPTIONS = [
+  "Family support",
+  "Foster care",
+  "Kinship",
+  "Adoption / guardianship",
+];
+
+const CASE_DESIGNATION_OPTIONS = [
+  "Care & protection",
+  "CRA",
+  "SAFE Haven",
+];
+
+const PERMANENCY_GOAL_OPTIONS = [
+  "Reunification",
+  "Adoption / guardianship",
+  "Independence",
+  "Supportive Care (I/DDS)",
+];
+
+// Case issues (multiselect checkboxes)
+const CASE_ISSUES = [
+  "Abuse",
+  "Neglect",
+  "Trauma",
+  "Justice involvement",
+  "Incarceration",
+  "Substance use",
+  "Disabilities",
+  "Housing instability",
+  "Poverty / financial",
+  "Sexual abuse / trauma",
+  "Mental health",
+  "Autism",
+  "Homelessness",
+  "Immigration",
+  "Divorce",
+];
+
+const VISITATION_STATUS_OPTIONS = [
+  "Supervised",
+  "Unsupervised",
+  "Home visit",
+  "Sibling visits",
+];
+
+// Child roles for display logic
+const CHILD_ROLES = ["child", "stepsibling", "half sibling", "adoptive sibling"];
+
+// Note type colors for visual distinction
+const NOTE_TYPE_COLORS = {
+  "Case update": "bg-blue-100 text-blue-800 border-blue-200",
+  "Recent visit": "bg-green-100 text-green-800 border-green-200",
+  "Contact": "bg-yellow-100 text-yellow-800 border-yellow-200",
+  "Recommendation": "bg-purple-100 text-purple-800 border-purple-200",
+  "Court report": "bg-red-100 text-red-800 border-red-200",
+  "Supervision": "bg-orange-100 text-orange-800 border-orange-200",
+};
+
+export default function CaseManagement() {
+  const navigate = useNavigate();
+  const { userRecord, hasCaseAccess } = useAuth();
+  const [caseData, setCaseData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showMemberForm, setShowMemberForm] = useState(false);
+  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Case info fields
+  const [dcfInvolvement, setDcfInvolvement] = useState("");
+  const [caseDesignation, setCaseDesignation] = useState("");
+  const [permanencyGoal, setPermanencyGoal] = useState("");
+
+  // Case issues
+  const [caseIssues, setCaseIssues] = useState([]);
+  const [visitationStatus, setVisitationStatus] = useState([]);
+  const [visitationDetails, setVisitationDetails] = useState("");
+
+  // Section collapse states
+  const [expandedSections, setExpandedSections] = useState({
+    caseInfo: true,
+    familyMembers: true,
+    issues: true,
+    notes: true,
+  });
+
+  // Expanded notes for viewing full details
+  const [expandedNotes, setExpandedNotes] = useState({});
+
+  // Edit mode for case info and issues sections
+  const [editingCaseInfo, setEditingCaseInfo] = useState(false);
+  const [editingIssues, setEditingIssues] = useState(false);
+
+  useEffect(() => {
+    if (!hasCaseAccess) {
+      navigate("/");
+      return;
+    }
+    fetchCase();
+  }, [hasCaseAccess, navigate, userRecord?.id]);
+
+  const fetchCase = async () => {
+    if (!userRecord?.id) return;
+    try {
+      setLoading(true);
+      const cases = await getCases(userRecord.id);
+      if (cases.length > 0) {
+        const c = cases[0];
+        setCaseData(c);
+        setDcfInvolvement(c.dcfInvolvement || "");
+        setCaseDesignation(c.caseDesignation || "");
+        setPermanencyGoal(c.permanencyGoal || "");
+        setCaseIssues(c.caseIssues || []);
+        setVisitationStatus(c.visitationStatus || []);
+        setVisitationDetails(c.visitationDetails || "");
+      } else {
+        const newCase = await createCase(userRecord.id);
+        setCaseData({ id: newCase.id, familyMembers: [], notes: [] });
+      }
+    } catch (err) {
+      console.error("Error fetching case:", err);
+      setError("Failed to load case data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const toggleNoteExpanded = (noteId) => {
+    setExpandedNotes((prev) => ({ ...prev, [noteId]: !prev[noteId] }));
+  };
+
+  // Save case info changes
+  const handleSaveCaseInfo = async () => {
+    try {
+      setActionLoading(true);
+      await updateCase(userRecord.id, caseData.id, {
+        dcfInvolvement,
+        caseDesignation,
+        permanencyGoal,
+      });
+      setCaseData({
+        ...caseData,
+        dcfInvolvement,
+        caseDesignation,
+        permanencyGoal,
+      });
+      setEditingCaseInfo(false);
+    } catch (err) {
+      console.error("Error saving case info:", err);
+      setError("Failed to save case info");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Save case issues changes
+  const handleSaveCaseIssues = async () => {
+    try {
+      setActionLoading(true);
+      await updateCase(userRecord.id, caseData.id, {
+        caseIssues,
+        visitationStatus,
+        visitationDetails,
+      });
+      setCaseData({
+        ...caseData,
+        caseIssues,
+        visitationStatus,
+        visitationDetails,
+      });
+      setEditingIssues(false);
+    } catch (err) {
+      console.error("Error saving case issues:", err);
+      setError("Failed to save case issues");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Cancel editing case info
+  const handleCancelCaseInfo = () => {
+    setDcfInvolvement(caseData?.dcfInvolvement || "");
+    setCaseDesignation(caseData?.caseDesignation || "");
+    setPermanencyGoal(caseData?.permanencyGoal || "");
+    setEditingCaseInfo(false);
+  };
+
+  // Cancel editing case issues
+  const handleCancelCaseIssues = () => {
+    setCaseIssues(caseData?.caseIssues || []);
+    setVisitationStatus(caseData?.visitationStatus || []);
+    setVisitationDetails(caseData?.visitationDetails || "");
+    setEditingIssues(false);
+  };
+
+  // Family member handlers
+  const handleAddMember = () => {
+    setEditingMember(null);
+    setShowMemberForm(true);
+  };
+
+  const handleEditMember = (member) => {
+    setEditingMember(member);
+    setShowMemberForm(true);
+  };
+
+  const handleSaveMember = async (memberData) => {
+    try {
+      setActionLoading(true);
+      let updatedMembers;
+      if (editingMember) {
+        updatedMembers = caseData.familyMembers.map((m) =>
+          m.id === memberData.id ? memberData : m
+        );
+      } else {
+        updatedMembers = [...(caseData.familyMembers || []), memberData];
+      }
+
+      await updateCase(userRecord.id, caseData.id, { familyMembers: updatedMembers });
+      setCaseData({ ...caseData, familyMembers: updatedMembers });
+      setShowMemberForm(false);
+      setEditingMember(null);
+    } catch (err) {
+      console.error("Error saving family member:", err);
+      setError("Failed to save family member");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteMember = async (memberId) => {
+    try {
+      setActionLoading(true);
+      const updatedMembers = caseData.familyMembers.filter((m) => m.id !== memberId);
+      await updateCase(userRecord.id, caseData.id, { familyMembers: updatedMembers });
+      setCaseData({ ...caseData, familyMembers: updatedMembers });
+    } catch (err) {
+      console.error("Error deleting family member:", err);
+      setError("Failed to delete family member");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Case issues handlers
+  const handleIssueToggle = (issue) => {
+    setCaseIssues((prev) =>
+      prev.includes(issue) ? prev.filter((i) => i !== issue) : [...prev, issue]
+    );
+  };
+
+  const handleVisitationToggle = (status) => {
+    setVisitationStatus((prev) =>
+      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+    );
+  };
+
+  // Case notes handlers
+  const handleSaveNote = async (noteData) => {
+    try {
+      setActionLoading(true);
+      const updatedNotes = [noteData, ...(caseData.notes || [])];
+      await updateCase(userRecord.id, caseData.id, { notes: updatedNotes });
+      setCaseData({ ...caseData, notes: updatedNotes });
+      setShowNoteForm(false);
+    } catch (err) {
+      console.error("Error adding note:", err);
+      setError("Failed to add note");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      setActionLoading(true);
+      const updatedNotes = (caseData.notes || []).filter((n) => n.id !== noteId);
+      await updateCase(userRecord.id, caseData.id, { notes: updatedNotes });
+      setCaseData({ ...caseData, notes: updatedNotes });
+    } catch (err) {
+      console.error("Error deleting note:", err);
+      setError("Failed to delete note");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const formatMemberLabel = (member) => {
+    const isChild = CHILD_ROLES.includes(member.familyRole);
+    let label = `${member.firstName} - ${member.age}yo ${member.gender} (${member.familyRole})`;
+    if (isChild && member.placement) {
+      label += ` | ${member.placement}`;
+    }
+    if (!isChild && member.statuses?.length > 0) {
+      label += ` | ${member.statuses.join(", ")}`;
+    }
+    if (member.medicated) {
+      label += ` | Medicated: ${member.medicated}`;
+    }
+    return label;
+  };
+
+  const formatDate = (isoString) => {
+    return new Date(isoString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (timeString) => {
+    if (!timeString) return "";
+    const [hours, minutes] = timeString.split(":");
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  // Render note details based on type
+  const renderNoteDetails = (note) => {
+    const details = [];
+
+    switch (note.noteType) {
+      case "Case update":
+        if (note.changesDescription) {
+          details.push(
+            <div key="changes" className="mt-2">
+              <span className="font-medium text-gray-700">Changes made: </span>
+              <span className="text-gray-600">{note.changesDescription}</span>
+            </div>
+          );
+        }
+        break;
+
+      case "Recent visit":
+        details.push(
+          <div key="visit" className="mt-2 text-sm text-gray-600">
+            <span className="font-medium text-gray-700">Visit: </span>
+            {formatDateOnly(note.visitDate)}
+            {note.visitTime && ` at ${formatTime(note.visitTime)}`}
+            {note.visitLocation && ` - ${note.visitLocation}`}
+          </div>
+        );
+        break;
+
+      case "Contact":
+        details.push(
+          <div key="contact" className="mt-2 text-sm text-gray-600">
+            <span className="font-medium text-gray-700">Method: </span>
+            {note.contactMethod}
+            {note.contactPartyLocations && (
+              <div className="ml-4 mt-1">
+                <span className="font-medium text-gray-700">Locations: </span>
+                {note.contactPartyLocations}
+              </div>
+            )}
+            {note.inPersonLocation && (
+              <div className="ml-4 mt-1">
+                <span className="font-medium text-gray-700">Location: </span>
+                {note.inPersonLocation}
+              </div>
+            )}
+          </div>
+        );
+        break;
+
+      case "Recommendation":
+        details.push(
+          <div key="rec" className="mt-2 text-sm space-y-1">
+            <div>
+              <span className="font-medium text-gray-700">Recommended action: </span>
+              <span className="text-gray-600">{note.recommendedAction}</span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Reasoning: </span>
+              <span className="text-gray-600">{note.reasoning}</span>
+            </div>
+            {note.supervisorMeetingDate && (
+              <div>
+                <span className="font-medium text-gray-700">Bringing to supervisor: </span>
+                <span className="text-gray-600">{formatDateOnly(note.supervisorMeetingDate)}</span>
+              </div>
+            )}
+          </div>
+        );
+        break;
+
+      case "Court report":
+        details.push(
+          <div key="court" className="mt-2 text-sm space-y-1">
+            <div>
+              <span className="font-medium text-gray-700">Hearing: </span>
+              <span className="text-gray-600">
+                {note.hearingType} on {formatDateOnly(note.hearingDate)}
+                {note.hearingTime && ` at ${formatTime(note.hearingTime)}`}
+              </span>
+            </div>
+            {note.attendees && (
+              <div>
+                <span className="font-medium text-gray-700">Attendees: </span>
+                <span className="text-gray-600">{note.attendees}</span>
+              </div>
+            )}
+            <div>
+              <span className="font-medium text-gray-700">Report overview: </span>
+              <span className="text-gray-600">{note.reportOverview}</span>
+            </div>
+          </div>
+        );
+        break;
+
+      case "Supervision":
+        details.push(
+          <div key="sup" className="mt-2 text-sm space-y-1">
+            <div>
+              <span className="font-medium text-gray-700">Meeting: </span>
+              <span className="text-gray-600">
+                {note.supervisionType} on {formatDateOnly(note.supervisionDate)}
+                {note.supervisionTime && ` at ${formatTime(note.supervisionTime)}`}
+                {note.supervisionLocation && ` - ${note.supervisionLocation}`}
+              </span>
+            </div>
+            {note.supervisionNotes && (
+              <div>
+                <span className="font-medium text-gray-700">Discussion: </span>
+                <span className="text-gray-600">{note.supervisionNotes}</span>
+              </div>
+            )}
+          </div>
+        );
+        break;
+    }
+
+    if (note.content) {
+      details.push(
+        <div key="content" className="mt-2 text-sm">
+          <span className="font-medium text-gray-700">Notes: </span>
+          <span className="text-gray-600">{note.content}</span>
+        </div>
+      );
+    }
+
+    return details;
+  };
+
+  // Get summary for collapsed note view
+  const getNoteSummary = (note) => {
+    switch (note.noteType) {
+      case "Case update":
+        return note.changesDescription?.substring(0, 100) || "Case information updated";
+      case "Recent visit":
+        return `Visit on ${formatDateOnly(note.visitDate)}${note.visitLocation ? ` at ${note.visitLocation}` : ""}`;
+      case "Contact":
+        return `${note.contactMethod} contact`;
+      case "Recommendation":
+        return note.recommendedAction?.substring(0, 100) || "Recommendation made";
+      case "Court report":
+        return `${note.hearingType} on ${formatDateOnly(note.hearingDate)}`;
+      case "Supervision":
+        return `${note.supervisionType} on ${formatDateOnly(note.supervisionDate)}`;
+      default:
+        return note.content?.substring(0, 100) || "Note added";
+    }
+  };
+
+  if (!hasCaseAccess) {
+    return null;
+  }
+
+  return (
+    <div className="bg-white px-6 py-6">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-brand-blue-dark">My Case</h1>
+          <p className="text-gray-600 mt-1">
+            Track case information, family members, and notes
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
+            {error}
+            <button
+              onClick={() => setError(null)}
+              className="ml-2 underline hover:no-underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center text-gray-600 py-12">Loading case data...</div>
+        ) : (
+          <div className="space-y-6">
+            {/* Case Information Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection("caseInfo")}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <ClipboardDocumentListIcon className="h-6 w-6 text-brand-blue" />
+                  <h3 className="font-semibold text-brand-blue-dark">Case Information</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!editingCaseInfo && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingCaseInfo(true);
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-brand-red text-white text-sm font-medium rounded hover:bg-red-700 transition-colors"
+                    >
+                      <PencilSquareIcon className="h-4 w-4" />
+                      Edit
+                    </button>
+                  )}
+                  {expandedSections.caseInfo ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.caseInfo && (
+                <div className="p-4 border-t border-gray-200 space-y-4">
+                  {editingCaseInfo ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            DCF Involvement
+                          </label>
+                          <select
+                            value={dcfInvolvement}
+                            onChange={(e) => setDcfInvolvement(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                          >
+                            <option value="">Select...</option>
+                            {DCF_INVOLVEMENT_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Case Designation
+                          </label>
+                          <select
+                            value={caseDesignation}
+                            onChange={(e) => setCaseDesignation(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                          >
+                            <option value="">Select...</option>
+                            {CASE_DESIGNATION_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Permanency Goal
+                          </label>
+                          <select
+                            value={permanencyGoal}
+                            onChange={(e) => setPermanencyGoal(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                          >
+                            <option value="">Select...</option>
+                            {PERMANENCY_GOAL_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={handleCancelCaseInfo}
+                          disabled={actionLoading}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 font-medium rounded hover:bg-gray-400 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveCaseInfo}
+                          disabled={actionLoading}
+                          className="px-4 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                        >
+                          {actionLoading ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <span className="block text-sm font-medium text-gray-500">DCF Involvement</span>
+                        <span className="text-gray-800">{dcfInvolvement || "Not set"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-gray-500">Case Designation</span>
+                        <span className="text-gray-800">{caseDesignation || "Not set"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-sm font-medium text-gray-500">Permanency Goal</span>
+                        <span className="text-gray-800">{permanencyGoal || "Not set"}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Case Issues Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection("issues")}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-brand-blue" />
+                  <h3 className="font-semibold text-brand-blue-dark">Relevant Case Issues</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!editingIssues && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingIssues(true);
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-brand-red text-white text-sm font-medium rounded hover:bg-red-700 transition-colors"
+                    >
+                      <PencilSquareIcon className="h-4 w-4" />
+                      Edit
+                    </button>
+                  )}
+                  {expandedSections.issues ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.issues && (
+                <div className="p-4 border-t border-gray-200 space-y-4">
+                  {editingIssues ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Issues (select all that apply)
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {CASE_ISSUES.map((issue) => (
+                            <label
+                              key={issue}
+                              className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={caseIssues.includes(issue)}
+                                onChange={() => handleIssueToggle(issue)}
+                                className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                              />
+                              {issue}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Visitation / Contact Status
+                        </label>
+                        <div className="flex flex-wrap gap-4 mb-3">
+                          {VISITATION_STATUS_OPTIONS.map((status) => (
+                            <label
+                              key={status}
+                              className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={visitationStatus.includes(status)}
+                                onChange={() => handleVisitationToggle(status)}
+                                className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                              />
+                              {status}
+                            </label>
+                          ))}
+                        </div>
+                        <textarea
+                          value={visitationDetails}
+                          onChange={(e) => setVisitationDetails(e.target.value)}
+                          placeholder="Describe visitation schedule and boundaries..."
+                          className="w-full h-24 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue resize-y"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={handleCancelCaseIssues}
+                          disabled={actionLoading}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 font-medium rounded hover:bg-gray-400 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveCaseIssues}
+                          disabled={actionLoading}
+                          className="px-4 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                        >
+                          {actionLoading ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <span className="block text-sm font-medium text-gray-500 mb-2">Issues</span>
+                        {caseIssues.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {caseIssues.map((issue) => (
+                              <span
+                                key={issue}
+                                className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded"
+                              >
+                                {issue}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">No issues selected</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="block text-sm font-medium text-gray-500 mb-2">
+                          Visitation / Contact Status
+                        </span>
+                        {visitationStatus.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {visitationStatus.map((status) => (
+                              <span
+                                key={status}
+                                className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded"
+                              >
+                                {status}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">No status selected</span>
+                        )}
+                        {visitationDetails && (
+                          <p className="text-gray-700 text-sm mt-2 whitespace-pre-wrap">
+                            {visitationDetails}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Family Members Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection("familyMembers")}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <UserGroupIcon className="h-6 w-6 text-brand-blue" />
+                  <div className="text-left">
+                    <h3 className="font-semibold text-brand-blue-dark">Family Members</h3>
+                    <p className="text-sm text-gray-600">
+                      {caseData?.familyMembers?.length || 0} member
+                      {caseData?.familyMembers?.length !== 1 ? "s" : ""} added
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddMember();
+                    }}
+                    disabled={actionLoading}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-brand-blue text-white text-sm font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add
+                  </button>
+                  {expandedSections.familyMembers ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.familyMembers && (
+                <div className="p-4 border-t border-gray-200">
+                  {caseData?.familyMembers?.length > 0 ? (
+                    <div className="space-y-2">
+                      {caseData.familyMembers.map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                        >
+                          <span className="text-gray-800 text-sm">
+                            {formatMemberLabel(member)}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditMember(member)}
+                              disabled={actionLoading}
+                              className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded"
+                              title="Edit"
+                            >
+                              <PencilSquareIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMember(member.id)}
+                              disabled={actionLoading}
+                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Remove"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <UserGroupIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                      <p>No family members added yet.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Case Notes Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection("notes")}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <DocumentTextIcon className="h-6 w-6 text-brand-blue" />
+                  <div className="text-left">
+                    <h3 className="font-semibold text-brand-blue-dark">Case Notes</h3>
+                    <p className="text-sm text-gray-600">
+                      {caseData?.notes?.length || 0} note
+                      {caseData?.notes?.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowNoteForm(true);
+                    }}
+                    disabled={actionLoading}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-brand-blue text-white text-sm font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add Note
+                  </button>
+                  {expandedSections.notes ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.notes && (
+                <div className="p-4 border-t border-gray-200">
+                  {caseData?.notes?.length > 0 ? (
+                    <div className="space-y-3">
+                      {caseData.notes.map((note) => (
+                        <div
+                          key={note.id}
+                          className={`p-3 rounded border ${
+                            NOTE_TYPE_COLORS[note.noteType] || "bg-gray-50 border-gray-200"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white bg-opacity-50">
+                                {note.noteType || "Note"}
+                              </span>
+                              <span className="text-xs opacity-75">
+                                {formatDate(note.createdAt)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => toggleNoteExpanded(note.id)}
+                                className="p-1 hover:bg-white hover:bg-opacity-50 rounded text-xs font-medium"
+                              >
+                                {expandedNotes[note.id] ? "Less" : "More"}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteNote(note.id)}
+                                disabled={actionLoading}
+                                className="p-1 hover:bg-white hover:bg-opacity-50 rounded"
+                                title="Delete note"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {expandedNotes[note.id] ? (
+                            <div className="mt-2">{renderNoteDetails(note)}</div>
+                          ) : (
+                            <p className="mt-2 text-sm truncate">
+                              {getNoteSummary(note)}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <DocumentTextIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                      <p>No notes added yet.</p>
+                      <p className="text-sm mt-1">Click "Add Note" to create your first case note.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showMemberForm && (
+          <FamilyMemberForm
+            member={editingMember}
+            onSave={handleSaveMember}
+            onCancel={() => {
+              setShowMemberForm(false);
+              setEditingMember(null);
+            }}
+          />
+        )}
+
+        {showNoteForm && (
+          <CaseNoteForm
+            onSave={handleSaveNote}
+            onCancel={() => setShowNoteForm(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
