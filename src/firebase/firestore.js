@@ -123,3 +123,77 @@ export const removeBookmark = async (userId, resourceId) => {
     bookmarks: arrayRemove(resourceId),
   });
 };
+
+// Resource locking functions
+export const lockResource = async (resourceId, managerId = null) => {
+  const updates = {
+    isLocked: true,
+    assignedManagerId: managerId,
+    lockedAt: new Date().toISOString(),
+  };
+  await updateDoc(doc(db, "resources", resourceId), updates);
+
+  // If a manager is assigned, add this resource to their managedResources array
+  if (managerId) {
+    const { arrayUnion } = await import("firebase/firestore");
+    await updateDoc(doc(db, "users", managerId), {
+      managedResources: arrayUnion(resourceId),
+    });
+  }
+};
+
+export const unlockResource = async (resourceId) => {
+  // First get the current resource to find the assigned manager
+  const resourceDoc = await getDoc(doc(db, "resources", resourceId));
+  const resourceData = resourceDoc.data();
+
+  // Remove resource from manager's managedResources if one was assigned
+  if (resourceData?.assignedManagerId) {
+    const { arrayRemove } = await import("firebase/firestore");
+    await updateDoc(doc(db, "users", resourceData.assignedManagerId), {
+      managedResources: arrayRemove(resourceId),
+    });
+  }
+
+  // Unlock the resource
+  return await updateDoc(doc(db, "resources", resourceId), {
+    isLocked: false,
+    assignedManagerId: null,
+    lockedAt: null,
+  });
+};
+
+export const assignManagerToResource = async (resourceId, managerId) => {
+  // Get the current resource to check for previous manager
+  const resourceDoc = await getDoc(doc(db, "resources", resourceId));
+  const resourceData = resourceDoc.data();
+  const { arrayUnion, arrayRemove } = await import("firebase/firestore");
+
+  // Remove from previous manager's list if there was one
+  if (resourceData?.assignedManagerId && resourceData.assignedManagerId !== managerId) {
+    await updateDoc(doc(db, "users", resourceData.assignedManagerId), {
+      managedResources: arrayRemove(resourceId),
+    });
+  }
+
+  // Update resource with new manager
+  await updateDoc(doc(db, "resources", resourceId), {
+    assignedManagerId: managerId,
+  });
+
+  // Add to new manager's managedResources
+  if (managerId) {
+    await updateDoc(doc(db, "users", managerId), {
+      managedResources: arrayUnion(resourceId),
+    });
+  }
+};
+
+// Get all managers for the assignment dropdown
+export const getManagers = async () => {
+  const { query, where } = await import("firebase/firestore");
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("role", "==", "manager"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};

@@ -13,7 +13,6 @@ import {
   PencilSquareIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ClockIcon,
   TrashIcon,
   EyeIcon,
 } from "@heroicons/react/24/solid";
@@ -37,6 +36,7 @@ export default function Admin() {
   const [showRecentActivity, setShowRecentActivity] = useState(false);
   const [showAccessRequests, setShowAccessRequests] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [showRoleBreakdown, setShowRoleBreakdown] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -124,14 +124,10 @@ export default function Admin() {
 
   const handleApproveRequest = async (requestId, requestData) => {
     try {
-      // Create or update the user
-      await updateUser(requestData.email, {
-        email: requestData.email,
-        name: requestData.name,
-        agency: requestData.agency,
+      // Update the user's role - use userId from the request
+      await updateUser(requestData.userId, {
         role: requestData.requestedAccessLevel,
         isApproved: true,
-        managedResources: requestData.resourcesAssigned || [],
       });
 
       // Update the request status
@@ -271,8 +267,16 @@ export default function Admin() {
     const admins = users.filter((u) => u.role === "admin").length;
     const contributors = users.filter((u) => u.role === "contributor").length;
     const managers = users.filter((u) => u.role === "manager").length;
+    const volunteers = users.filter((u) => u.role === "casa-volunteer" || u.role === "volunteer").length;
+    const staff = users.filter((u) => u.role === "casa-staff").length;
+    const affiliates = users.filter((u) => u.role === "agency-affiliate").length;
+    const general = users.filter((u) => u.role === "general").length;
+    // Admin users = admins + managers + contributors
+    const adminUsers = admins + managers + contributors;
+    // General users = volunteers + staff + affiliates + general
+    const generalUsers = volunteers + staff + affiliates + general;
 
-    return { total: users.length, admins, contributors, managers };
+    return { total: users.length, admins, contributors, managers, volunteers, staff, affiliates, general, adminUsers, generalUsers };
   };
 
   const filteredResourceOptions = resources.filter(
@@ -433,7 +437,7 @@ export default function Admin() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-[48px] font-bold text-brand-blue leading-none mb-2">
                 {getResourceStats().total}
@@ -445,12 +449,6 @@ export default function Admin() {
                 {getResourceStats().recent}
               </p>
               <p className="text-[14px] font-semibold text-brand-blueDark">Added/edited</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[48px] font-bold text-brand-red leading-none mb-2">
-                {getResourceStats().stubs}
-              </p>
-              <p className="text-[14px] font-semibold text-brand-blueDark">Stubs</p>
             </div>
             <div className="text-center">
               <p className="text-[48px] font-bold text-green-600 leading-none mb-2">
@@ -538,40 +536,88 @@ export default function Admin() {
           </div>
 
           {/* User Stats Row */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="text-center">
               <p className="text-[48px] font-bold text-brand-blue leading-none mb-2">
                 {getUserStats().total}
               </p>
               <p className="text-[14px] font-semibold text-brand-blue">
-                {getUserStats().total === 1 ? "Total user" : "Total users"}
+                {getUserStats().total === 1 ? "Total User" : "Total Users"}
               </p>
             </div>
             <div className="text-center">
               <p className="text-[48px] font-bold text-[#999999] leading-none mb-2">
-                {getUserStats().admins}
+                {getUserStats().adminUsers}
               </p>
               <p className="text-[14px] font-semibold text-brand-blueDark">
-                {getUserStats().admins === 1 ? "Admin" : "Admins"}
+                {getUserStats().adminUsers === 1 ? "Admin User" : "Admin Users"}
               </p>
             </div>
             <div className="text-center">
               <p className="text-[48px] font-bold text-[#999999] leading-none mb-2">
-                {getUserStats().contributors}
+                {getUserStats().generalUsers}
               </p>
               <p className="text-[14px] font-semibold text-brand-blueDark">
-                {getUserStats().contributors === 1 ? "Contributor" : "Contributors"}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-[48px] font-bold text-[#999999] leading-none mb-2">
-                {getUserStats().managers}
-              </p>
-              <p className="text-[14px] font-semibold text-brand-blueDark">
-                {getUserStats().managers === 1 ? "Manager" : "Managers"}
+                {getUserStats().generalUsers === 1 ? "General User" : "General Users"}
               </p>
             </div>
           </div>
+
+          {/* Role Breakdown Toggle */}
+          <button
+            onClick={() => setShowRoleBreakdown(!showRoleBreakdown)}
+            className="text-[12px] text-gray-500 underline hover:text-gray-700 mb-4"
+          >
+            {showRoleBreakdown ? "Hide role breakdown" : "Show role breakdown"}
+          </button>
+
+          {/* Role Breakdown Table */}
+          {showRoleBreakdown && (
+            <div className="border border-gray-200 overflow-hidden mb-6">
+              <table className="w-full text-sm">
+                <tbody>
+                  {/* Admin Section */}
+                  <tr className="bg-gray-100">
+                    <td className="px-4 py-2 font-semibold text-brand-blueDark">Admin</td>
+                    <td className="px-4 py-2 text-right font-semibold text-brand-blueDark">{getUserStats().adminUsers}</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-4 py-2 pl-8 text-brand-blueDark">Superadmins</td>
+                    <td className="px-4 py-2 text-right text-brand-gray">{getUserStats().admins}</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-4 py-2 pl-8 text-brand-blueDark">Contributors</td>
+                    <td className="px-4 py-2 text-right text-brand-gray">{getUserStats().contributors}</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-4 py-2 pl-8 text-brand-blueDark">Managers</td>
+                    <td className="px-4 py-2 text-right text-brand-gray">{getUserStats().managers}</td>
+                  </tr>
+                  {/* General Users Section */}
+                  <tr className="bg-gray-100 border-t border-gray-300">
+                    <td className="px-4 py-2 font-semibold text-brand-blueDark">General Users</td>
+                    <td className="px-4 py-2 text-right font-semibold text-brand-blueDark">{getUserStats().generalUsers}</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-4 py-2 pl-8 text-brand-blueDark">CASA Volunteers</td>
+                    <td className="px-4 py-2 text-right text-brand-gray">{getUserStats().volunteers}</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-4 py-2 pl-8 text-brand-blueDark">CASA Staff</td>
+                    <td className="px-4 py-2 text-right text-brand-gray">{getUserStats().staff}</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-4 py-2 pl-8 text-brand-blueDark">Agency Affiliates</td>
+                    <td className="px-4 py-2 text-right text-brand-gray">{getUserStats().affiliates}</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="px-4 py-2 pl-8 text-brand-blueDark">Unaffiliated</td>
+                    <td className="px-4 py-2 text-right text-brand-gray">{getUserStats().general}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {showUsers && users.length > 0 && (
             <div className="divide-y divide-gray-200 pt-6 border-t border-gray-200">
@@ -767,9 +813,9 @@ export default function Admin() {
               <EyeIcon className="w-6 h-6" />
             </button>
           </div>
-          
+
           {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-[48px] font-bold text-brand-blue leading-none mb-2">
                 {getResourceStats().total}
@@ -781,12 +827,6 @@ export default function Admin() {
                 {getResourceStats().recent}
               </p>
               <p className="text-[14px] font-semibold text-brand-blueDark">Added/edited</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[48px] font-bold text-brand-red leading-none mb-2">
-                {getResourceStats().stubs}
-              </p>
-              <p className="text-[14px] font-semibold text-brand-blueDark">Stubs</p>
             </div>
             <div className="text-center">
               <p className="text-[48px] font-bold text-green-600 leading-none mb-2">

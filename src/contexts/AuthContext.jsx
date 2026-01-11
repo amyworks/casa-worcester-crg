@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { onSnapshot, doc } from "firebase/firestore";
 import { auth, db } from "../firebase/firebase";
-import { getUserByEmail } from "../firebase/firestore";
+import { getUserByEmail, updateUser } from "../firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -36,6 +36,11 @@ export function AuthProvider({ children }) {
         try {
           const record = await getUserByEmail(firebaseUser.email);
           if (record?.id) {
+            // Sync photoURL from Firebase Auth to Firestore if missing or changed
+            if (firebaseUser.photoURL && record.photoURL !== firebaseUser.photoURL) {
+              await updateUser(record.id, { photoURL: firebaseUser.photoURL });
+            }
+
             // Set up real-time listener for user document
             unsubscribeFirestore = onSnapshot(
               doc(db, "users", record.id),
@@ -73,6 +78,28 @@ export function AuthProvider({ children }) {
   // Basic user roles (all have same browse/bookmark permissions)
   const basicUserRoles = ["volunteer", "general", "casa-volunteer", "casa-staff", "agency-affiliate"];
 
+  // Helper to check if user can edit a specific resource (considers locking)
+  const canEditResource = (resource) => {
+    if (!userRecord?.isApproved) return false;
+
+    // Superadmins can always edit
+    if (userRecord.role === "admin") return true;
+
+    // If resource is locked
+    if (resource?.isLocked) {
+      // Only assigned manager can edit (besides superadmin)
+      if (userRecord.role === "manager" && resource.assignedManagerId === userRecord.id) {
+        return true;
+      }
+      return false;
+    }
+
+    // Unlocked resources: Contributors and Managers can edit
+    if (["contributor", "manager"].includes(userRecord.role)) return true;
+
+    return false;
+  };
+
   const value = {
     user,
     userRecord,
@@ -87,6 +114,8 @@ export function AuthProvider({ children }) {
     isApproved: userRecord?.isApproved || false,
     // Helper to check if user can edit resources (admin, manager, or contributor)
     canEditResources: userRecord?.isApproved && ["admin", "manager", "contributor"].includes(userRecord?.role),
+    // Helper to check if user can edit a specific resource (considers locking)
+    canEditResource,
     // Bookmarks
     bookmarks: userRecord?.bookmarks || [],
   };

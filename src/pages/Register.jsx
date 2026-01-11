@@ -101,6 +101,7 @@ export default function Register() {
       await createUser(user.uid, {
         email: user.email,
         name: user.displayName || "",
+        photoURL: user.photoURL || "",
         role: role,
         isApproved: true,
 
