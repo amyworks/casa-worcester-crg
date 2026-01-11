@@ -108,3 +108,18 @@ export const deleteResourceLogo = async (logoUrl) => {
     }
   }
 };
+
+// Bookmark functions
+export const addBookmark = async (userId, resourceId) => {
+  const { arrayUnion } = await import("firebase/firestore");
+  return await updateDoc(doc(db, "users", userId), {
+    bookmarks: arrayUnion(resourceId),
+  });
+};
+
+export const removeBookmark = async (userId, resourceId) => {
+  const { arrayRemove } = await import("firebase/firestore");
+  return await updateDoc(doc(db, "users", userId), {
+    bookmarks: arrayRemove(resourceId),
+  });
+};

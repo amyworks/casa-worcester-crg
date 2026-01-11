@@ -1,11 +1,37 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { EyeIcon, NoSymbolIcon } from "@heroicons/react/24/solid";
+import { EyeIcon, NoSymbolIcon, BookmarkIcon } from "@heroicons/react/24/solid";
+import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
+import { addBookmark, removeBookmark } from "../../firebase/firestore";
 
 export default function ResourceGuideCard({ resource }) {
   const { id, name, city, state, logoUrl, serviceDomains, organizationType, isUnavailable: unavailableFlag } = resource;
   const [showTooltip, setShowTooltip] = useState(null);
   const [logoError, setLogoError] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { user, bookmarks } = useAuth();
+
+  const isBookmarked = bookmarks.includes(id);
+
+  const handleBookmarkClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || saving) return;
+
+    setSaving(true);
+    try {
+      if (isBookmarked) {
+        await removeBookmark(user.uid, id);
+      } else {
+        await addBookmark(user.uid, id);
+      }
+    } catch (error) {
+      console.error("Error toggling bookmark:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Format location display
   const location = [city, state].filter(Boolean).join(", ");
@@ -67,7 +93,7 @@ export default function ResourceGuideCard({ resource }) {
           )}
         </div>
 
-        {/* Status Icons and View Button - right side */}
+        {/* Status Icons, Save Button, and View Button - right side */}
         <div className="flex-shrink-0 flex items-center gap-2">
           {/* Unavailable icon */}
           {isUnavailable && (
@@ -84,6 +110,36 @@ export default function ResourceGuideCard({ resource }) {
               {showTooltip === "unavailable" && (
                 <div className="absolute right-0 bottom-full mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
                   Currently Unavailable
+                  <div className="absolute top-full right-2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Save/Bookmark Button - only for logged in users */}
+          {user && (
+            <div
+              className="relative"
+              onMouseEnter={() => !isBookmarked && setShowTooltip("save")}
+              onMouseLeave={() => setShowTooltip(null)}
+            >
+              <button
+                onClick={handleBookmarkClick}
+                disabled={saving}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+              >
+                {isBookmarked && (
+                  <span className="text-gray-500">Saved</span>
+                )}
+                {isBookmarked ? (
+                  <BookmarkIcon className="h-4 w-4" style={{ color: "#F2AF29" }} />
+                ) : (
+                  <BookmarkOutlineIcon className="h-4 w-4 text-gray-400" />
+                )}
+              </button>
+              {showTooltip === "save" && !isBookmarked && (
+                <div className="absolute right-0 bottom-full mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
+                  Save this resource
                   <div className="absolute top-full right-2 border-4 border-transparent border-t-gray-900"></div>
                 </div>
               )}

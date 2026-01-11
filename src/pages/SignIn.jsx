@@ -3,52 +3,41 @@ import GoogleSignInButton from "../components/GoogleSignInButton";
 
 export default function SignIn() {
   return (
-    <div className="min-h-screen bg-brand-blue flex items-center justify-center px-6 py-16">
+    <div className="-mt-20 min-h-screen pt-20 bg-brand-blue flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-md">
         {/* Card Container */}
         <div className="bg-white rounded-lg shadow-lg p-8">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-brand-blue-dark mb-2">
-              Sign In
+              Sign In or Create Account
             </h1>
             <p className="text-sm text-gray-600">
-              Sign in to manage resources and contribute to the community guide
+              Access the CASA Worcester Community Resource Guide
             </p>
           </div>
 
+          {/* Benefits */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm font-semibold text-brand-blue-dark mb-2">
+              With an account you can:
+            </p>
+            <ul className="text-sm text-gray-700 space-y-1">
+              <li>• Bookmark resources for quick reference</li>
+              <li>• Access resources across all your devices</li>
+              <li>• Request staff access to manage resources</li>
+            </ul>
+          </div>
+
           {/* Google Sign In Button */}
-          <div className="mb-6">
+          <div className="mb-4">
             <GoogleSignInButton />
           </div>
 
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
-                Don't have access?
-              </span>
-            </div>
-          </div>
-
-          {/* Request Access Link */}
-          <div className="text-center">
-            <Link
-              to="/request-access"
-              className="inline-block px-6 py-3 bg-brand-red text-white font-semibold rounded-full hover:bg-brand-red-hover transition-colors"
-            >
-              Request Access
-            </Link>
-          </div>
-
           {/* Info Text */}
-          <div className="mt-8 text-center">
-            <p className="text-xs text-gray-600">
-              Access is restricted to authorized CASA staff and partner organizations.
-              If you need to request access, please use the Request Access button above.
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              New users will complete a quick registration. Already have an account? You'll be signed in automatically.
             </p>
           </div>
         </div>

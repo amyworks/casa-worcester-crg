@@ -7,9 +7,11 @@ import Listings from "./pages/Listings";
 import ResourceDetail from "./pages/ResourceDetail";
 import AddResource from "./pages/AddResource";
 import SignIn from "./pages/SignIn";
+import Register from "./pages/Register";
 import RequestAccess from "./pages/RequestAccess";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import SavedResources from "./pages/SavedResources";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 
@@ -24,9 +26,11 @@ export const router = createBrowserRouter([
       { path: "resource/:id", element: <ResourceDetail /> }, // /resource/abc123
       { path: "add-resource", element: <AddResource /> }, // /add-resource (admin only)
       { path: "signin", element: <SignIn /> },            // /signin
-      { path: "request-access", element: <RequestAccess /> }, // /request-access
+      { path: "register", element: <Register /> },        // /register (new user registration)
+      { path: "request-access", element: <RequestAccess /> }, // /request-access (staff access)
       { path: "admin", element: <Admin /> },              // /admin (gate later)
       { path: "profile", element: <Profile /> },          // /profile
+      { path: "saved", element: <SavedResources /> },   // /saved (bookmarked resources)
       { path: "terms", element: <Terms /> },
       { path: "privacy", element: <Privacy /> },
     ],

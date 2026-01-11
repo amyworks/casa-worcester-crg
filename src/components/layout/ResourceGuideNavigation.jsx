@@ -3,7 +3,7 @@ import { XMarkIcon, ArrowRightEndOnRectangleIcon, ArrowRightStartOnRectangleIcon
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
 
-export default function ResourceGuideNavigation({ open, onClose, user }) {
+export default function ResourceGuideNavigation({ open, onClose, user, userRecord }) {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -17,6 +17,10 @@ export default function ResourceGuideNavigation({ open, onClose, user }) {
     if (!user?.displayName) return "User";
     return user.displayName.split(" ")[0];
   };
+
+  // Check if user can access admin panel
+  const canAccessAdmin = userRecord?.isApproved &&
+    ["admin", "manager", "contributor"].includes(userRecord?.role);
 
   if (!open) return null;
 
@@ -33,11 +37,17 @@ export default function ResourceGuideNavigation({ open, onClose, user }) {
                 onClick={onClose}
                 className="flex items-center gap-3 hover:opacity-90 transition-opacity"
               >
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || "User"}
-                  className="h-10 w-10 rounded-full border-2 border-brand-white"
-                />
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || "User"}
+                    className="h-10 w-10 rounded-full border-2 border-brand-white"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full border-2 border-brand-white bg-brand-red flex items-center justify-center text-white font-bold">
+                    {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <span className="text-sm font-semibold text-brand-white">
                   Hi, {getFirstName()}!
                 </span>
@@ -68,17 +78,27 @@ export default function ResourceGuideNavigation({ open, onClose, user }) {
 
         {/* Main nav links */}
         <nav className="mt-10 flex flex-col gap-6">
+          {user && (
+            <Link to="/saved" onClick={onClose} className="text-3xl font-bold">
+              Saved Resources
+            </Link>
+          )}
           <Link to="/search" onClick={onClose} className="text-3xl font-bold">
             Search
           </Link>
           <Link to="/browse" onClick={onClose} className="text-3xl font-bold">
             Browse
           </Link>
-          {user && (
+          {user ? (
             <>
-              <Link to="/admin" onClick={onClose} className="text-3xl font-bold">
-                Admin
+              <Link to="/profile" onClick={onClose} className="text-3xl font-bold">
+                Profile
               </Link>
+              {canAccessAdmin && (
+                <Link to="/admin" onClick={onClose} className="text-3xl font-bold">
+                  Admin
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -88,10 +108,9 @@ export default function ResourceGuideNavigation({ open, onClose, user }) {
                 <ArrowRightStartOnRectangleIcon className="h-5 w-5" />
               </button>
             </>
-          )}
-          {!user && (
-            <Link to="/request-access" onClick={onClose} className="text-3xl font-bold">
-              Request Access
+          ) : (
+            <Link to="/signin" onClick={onClose} className="text-3xl font-bold">
+              Create Account
             </Link>
           )}
         </nav>

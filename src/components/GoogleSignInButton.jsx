@@ -23,9 +23,9 @@ export default function GoogleSignInButton() {
       console.log("User record from Firestore:", userRecord);
 
       if (!userRecord) {
-        // User not found, redirect to request access
-        console.log("No user record found, redirecting to request access");
-        navigate("/request-access?reason=no-access");
+        // New user - redirect to registration form
+        console.log("No user record found, redirecting to registration");
+        navigate("/register");
       } else {
         // User record exists, but we need to make sure their UID is set in Firestore
         // (in case they were pre-approved by email but this is their first login)
@@ -39,14 +39,15 @@ export default function GoogleSignInButton() {
             role: userRecord.role,
             isApproved: userRecord.isApproved,
             managedResources: userRecord.managedResources || [],
+            bookmarks: userRecord.bookmarks || [],
           });
           // Re-fetch with the correct ID
           userRecord = { ...userRecord, id: user.uid };
         }
 
         if (!userRecord.isApproved) {
-          // User exists but not approved
-          console.log("User not approved, redirecting to request access");
+          // User exists but not approved (staff access pending)
+          console.log("User not approved, redirecting to pending page");
           navigate("/request-access?reason=pending");
         } else {
           // User is approved, redirect to browse or admin based on role
@@ -88,7 +89,7 @@ export default function GoogleSignInButton() {
           d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
         />
       </svg>
-      Sign in with Google
+      Sign in / Sign up with Google
     </button>
   );
 }

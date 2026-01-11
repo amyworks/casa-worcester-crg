@@ -8,9 +8,11 @@ import {
   ChevronRightIcon,
   PhotoIcon,
   XMarkIcon,
+  BookmarkIcon,
 } from "@heroicons/react/24/solid";
+import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
-import { updateResource, uploadResourceLogo } from "../../firebase/firestore";
+import { updateResource, uploadResourceLogo, addBookmark, removeBookmark } from "../../firebase/firestore";
 import {
   getRegionNames,
   getCountyNamesInRegion,
@@ -96,8 +98,29 @@ const ORGANIZATION_TYPES = [
 ];
 
 export default function ResourceGuideEntry({ resource, isEditing: externalIsEditing, onEditingChange }) {
-  const { userRecord } = useAuth();
+  const { userRecord, user, bookmarks } = useAuth();
   const [internalIsEditing, setInternalIsEditing] = useState(false);
+  const [bookmarkSaving, setBookmarkSaving] = useState(false);
+  const [showBookmarkTooltip, setShowBookmarkTooltip] = useState(false);
+
+  const isBookmarked = bookmarks.includes(resource.id);
+
+  const handleBookmarkClick = async () => {
+    if (!user || bookmarkSaving) return;
+
+    setBookmarkSaving(true);
+    try {
+      if (isBookmarked) {
+        await removeBookmark(user.uid, resource.id);
+      } else {
+        await addBookmark(user.uid, resource.id);
+      }
+    } catch (error) {
+      console.error("Error toggling bookmark:", error);
+    } finally {
+      setBookmarkSaving(false);
+    }
+  };
 
   // Use external editing state if provided, otherwise use internal
   const isEditing = externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
@@ -463,12 +486,42 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
             </>
           ) : (
             <>
-              <h2 className="text-[36px] font-bold text-brand-blue-dark leading-tight">
-                {name}
-              </h2>
-              {organizationType && (
-                <p className="text-[18px] font-medium text-gray-600">{organizationType}</p>
-              )}
+              <div className="flex items-start gap-3">
+                {/* Bookmark button - left of agency name (icon only) */}
+                {user && (
+                  <div
+                    className="relative flex-shrink-0 mt-2"
+                    onMouseEnter={() => setShowBookmarkTooltip(true)}
+                    onMouseLeave={() => setShowBookmarkTooltip(false)}
+                  >
+                    <button
+                      onClick={handleBookmarkClick}
+                      disabled={bookmarkSaving}
+                      className="transition-opacity hover:opacity-80 disabled:opacity-50"
+                    >
+                      {isBookmarked ? (
+                        <BookmarkIcon className="h-7 w-7" style={{ color: "#F2AF29" }} />
+                      ) : (
+                        <BookmarkOutlineIcon className="h-7 w-7 text-gray-400" />
+                      )}
+                    </button>
+                    {showBookmarkTooltip && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
+                        {isBookmarked ? "Saved" : "Save this resource"}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-[36px] font-bold text-brand-blue-dark leading-tight">
+                    {name}
+                  </h2>
+                  {organizationType && (
+                    <p className="text-[18px] font-medium text-gray-600">{organizationType}</p>
+                  )}
+                </div>
+              </div>
               {/* Special Features Pills */}
               {(resource.crisisServices || resource.spanishSpeaking || resource.interpretationAvailable || resource.transportationProvided || resource.autismServices) && (
                 <div className="flex flex-wrap gap-2 mt-2">

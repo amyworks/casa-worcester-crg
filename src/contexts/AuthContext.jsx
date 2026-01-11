@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { onSnapshot, doc } from "firebase/firestore";
+import { auth, db } from "../firebase/firebase";
 import { getUserByEmail } from "../firebase/firestore";
 
 const AuthContext = createContext();
@@ -19,14 +20,37 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeFirestore = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
 
+      // Clean up previous Firestore listener
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+        unsubscribeFirestore = null;
+      }
+
       if (firebaseUser) {
-        // Fetch user record from Firestore
+        // First fetch to get the user document ID
         try {
           const record = await getUserByEmail(firebaseUser.email);
-          setUserRecord(record);
+          if (record?.id) {
+            // Set up real-time listener for user document
+            unsubscribeFirestore = onSnapshot(
+              doc(db, "users", record.id),
+              (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                  setUserRecord({ id: docSnapshot.id, ...docSnapshot.data() });
+                }
+              },
+              (error) => {
+                console.error("Error listening to user record:", error);
+              }
+            );
+          } else {
+            setUserRecord(record);
+          }
         } catch (error) {
           console.error("Error fetching user record:", error);
           setUserRecord(null);
@@ -38,8 +62,16 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+      }
+    };
   }, []);
+
+  // Basic user roles (all have same browse/bookmark permissions)
+  const basicUserRoles = ["volunteer", "general", "casa-volunteer", "casa-staff", "agency-affiliate"];
 
   const value = {
     user,
@@ -48,7 +80,15 @@ export function AuthProvider({ children }) {
     isAdmin: userRecord?.role === "admin" && userRecord?.isApproved,
     isContributor: userRecord?.role === "contributor" && userRecord?.isApproved,
     isManager: userRecord?.role === "manager" && userRecord?.isApproved,
+    // isBasicUser covers all non-privileged roles (for permission checks)
+    isBasicUser: basicUserRoles.includes(userRecord?.role) && userRecord?.isApproved,
+    // Legacy alias
+    isVolunteer: basicUserRoles.includes(userRecord?.role) && userRecord?.isApproved,
     isApproved: userRecord?.isApproved || false,
+    // Helper to check if user can edit resources (admin, manager, or contributor)
+    canEditResources: userRecord?.isApproved && ["admin", "manager", "contributor"].includes(userRecord?.role),
+    // Bookmarks
+    bookmarks: userRecord?.bookmarks || [],
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
