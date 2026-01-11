@@ -61,7 +61,7 @@ export default function ResourceGuideFilters({ filters, onFiltersChange }) {
     "County-wide",
     "Regional",
     "Statewide",
-    "Multi-state / National",
+    "Nationwide",
   ];
 
   const countyOptions = [

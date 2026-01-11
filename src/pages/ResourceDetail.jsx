@@ -79,24 +79,26 @@ export default function ResourceDetail() {
             Back to Results
           </button>
 
-          {/* Edit and Delete Buttons - only for admins, not in edit mode */}
+          {/* Edit Button - only for admins, only in view mode */}
           {isAdmin && !isEditing && !loading && !error && resource && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-red text-white text-sm font-medium rounded hover:bg-brand-red-hover transition-colors"
-              >
-                Edit
-                <PencilSquareIcon className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-500 text-white text-sm font-medium rounded hover:bg-gray-600 transition-colors"
-              >
-                Delete
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-red text-white text-sm font-medium rounded hover:bg-brand-red-hover transition-colors"
+            >
+              Edit
+              <PencilSquareIcon className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Delete Button - only for admins, only in edit mode (buried to avoid accidental deletion) */}
+          {isAdmin && isEditing && !loading && !error && resource && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-500 text-white text-sm font-medium rounded hover:bg-gray-600 transition-colors"
+            >
+              Delete
+              <TrashIcon className="h-4 w-4" />
+            </button>
           )}
         </div>
 

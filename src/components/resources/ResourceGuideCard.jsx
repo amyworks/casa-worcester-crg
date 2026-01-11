@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { EyeIcon, ExclamationCircleIcon, StarIcon, NoSymbolIcon } from "@heroicons/react/24/solid";
+import { EyeIcon, NoSymbolIcon } from "@heroicons/react/24/solid";
 
 export default function ResourceGuideCard({ resource }) {
-  const { id, name, city, state, logoUrl, serviceDomains, organizationType, entryStatus, isUnavailable: unavailableFlag } = resource;
+  const { id, name, city, state, logoUrl, serviceDomains, organizationType, isUnavailable: unavailableFlag } = resource;
   const [showTooltip, setShowTooltip] = useState(null);
+  const [logoError, setLogoError] = useState(false);
 
   // Format location display
   const location = [city, state].filter(Boolean).join(", ");
 
-  // Determine status - entryStatus is "complete" or "stub", isUnavailable is a separate boolean
-  const isStub = entryStatus === "stub";
-  const isComplete = entryStatus === "complete" || !entryStatus;
+  // Determine if unavailable
   const isUnavailable = unavailableFlag === true;
 
   return (
@@ -21,12 +20,13 @@ export default function ResourceGuideCard({ resource }) {
     >
       <div className="flex gap-4 items-start">
         {/* Logo */}
-        <div className="flex-shrink-0">
-          {logoUrl ? (
+        <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
+          {logoUrl && !logoError ? (
             <img
               src={logoUrl}
               alt={`${name} logo`}
-              className="max-w-12 h-auto rounded"
+              className="max-w-12 max-h-12 w-auto h-auto object-contain"
+              onError={() => setLogoError(true)}
             />
           ) : (
             <div className="flex h-12 w-12 items-center justify-center rounded bg-gray-100">
@@ -69,8 +69,7 @@ export default function ResourceGuideCard({ resource }) {
 
         {/* Status Icons and View Button - right side */}
         <div className="flex-shrink-0 flex items-center gap-2">
-          {/* Status Icon with Tooltip */}
-          {/* Unavailable icon - shown first if applicable */}
+          {/* Unavailable icon */}
           {isUnavailable && (
             <div
               className="relative group"
@@ -85,48 +84,6 @@ export default function ResourceGuideCard({ resource }) {
               {showTooltip === "unavailable" && (
                 <div className="absolute right-0 bottom-full mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
                   Currently Unavailable
-                  <div className="absolute top-full right-2 border-4 border-transparent border-t-gray-900"></div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Stub icon */}
-          {isStub && (
-            <div
-              className="relative group"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowTooltip(showTooltip === "stub" ? null : "stub");
-              }}
-              onMouseEnter={() => setShowTooltip("stub")}
-              onMouseLeave={() => setShowTooltip(null)}
-            >
-              <ExclamationCircleIcon className="h-5 w-5 text-brand-blue-dark cursor-help" />
-              {showTooltip === "stub" && (
-                <div className="absolute right-0 bottom-full mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
-                  Incomplete Entry
-                  <div className="absolute top-full right-2 border-4 border-transparent border-t-gray-900"></div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Complete icon */}
-          {isComplete && (
-            <div
-              className="relative group"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowTooltip(showTooltip === "complete" ? null : "complete");
-              }}
-              onMouseEnter={() => setShowTooltip("complete")}
-              onMouseLeave={() => setShowTooltip(null)}
-            >
-              <StarIcon className="h-5 w-5 text-brand-blue-dark cursor-help" />
-              {showTooltip === "complete" && (
-                <div className="absolute right-0 bottom-full mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
-                  Complete Entry
                   <div className="absolute top-full right-2 border-4 border-transparent border-t-gray-900"></div>
                 </div>
               )}

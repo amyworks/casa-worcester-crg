@@ -648,6 +648,12 @@ export const MA_GEOGRAPHIC_DATA = {
             ]
           },
           {
+            "name": "Plainville",
+            "zipCodes": [
+              "02762"
+            ]
+          },
+          {
             "name": "Walpole",
             "zipCodes": [
               "02081"
@@ -1409,12 +1415,6 @@ export const MA_GEOGRAPHIC_DATA = {
             "zipCodes": [
               "02492",
               "02494"
-            ]
-          },
-          {
-            "name": "Norfolk",
-            "zipCodes": [
-              "02056"
             ]
           },
           {

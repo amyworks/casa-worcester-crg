@@ -15,7 +15,6 @@ import {
   getRegionNames,
   getCountyNamesInRegion,
   getCitiesInCounty,
-  getCitiesInRegion,
   MA_GEOGRAPHIC_DATA,
 } from "../../data/massachusettsGeography";
 
@@ -93,13 +92,8 @@ const ORGANIZATION_TYPES = [
   "Mutual Aid / Grassroots",
   "Healthcare Provider",
   "Educational Organization",
+  "Online Resource",
 ];
-
-// Entry status options (Complete vs Stub - mutually exclusive)
-const ENTRY_STATUSES = {
-  complete: { label: "Complete", description: "Entry is fully complete" },
-  stub: { label: "Stub", description: "Entry needs more information" },
-};
 
 export default function ResourceGuideEntry({ resource, isEditing: externalIsEditing, onEditingChange }) {
   const { userRecord } = useAuth();
@@ -169,19 +163,23 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
     contactPhone,
     contactFax,
     contactEmail,
+    contactVP,
+    contactForm,
+    contactCrisis,
+    contactCrisisHours,
     website,
     crisisServices,
     spanishSpeaking,
     transportationProvided,
     interpretationAvailable,
     geographicCities = [], // Array of {city, zipCodes, county, region}
+    geographicOffices = [], // Array of city names where org has offices
     organizationType,
     accessMethods = [],
     eligibilityConstraints = [],
     additionalInfo,
     amazonWishlistUrl,
-    entryStatus = "complete", // "complete" or "stub"
-    isUnavailable = false, // separate boolean for availability
+    isUnavailable = false, // boolean for availability
   } = isEditing ? editedData : resource;
 
   // Handle logo file selection
@@ -304,218 +302,6 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
     setOpenCounties((prev) => ({ ...prev, [countyKey]: !prev[countyKey] }));
   };
 
-  // Check if a city is selected
-  const isCitySelected = (cityName) => {
-    const cities = editedData.geographicCities || [];
-    return cities.some((c) => c.city === cityName);
-  };
-
-  // Check if all cities in a county are selected
-  const isCountyFullySelected = (regionName, countyName) => {
-    const cities = getCitiesInCounty(regionName, countyName);
-    return cities.every((cityData) => isCitySelected(cityData.name));
-  };
-
-  // Check if any cities in a county are selected
-  const isCountyPartiallySelected = (regionName, countyName) => {
-    const cities = getCitiesInCounty(regionName, countyName);
-    return cities.some((cityData) => isCitySelected(cityData.name)) && !isCountyFullySelected(regionName, countyName);
-  };
-
-  // Check if all cities in a region are selected
-  const isRegionFullySelected = (regionName) => {
-    const countyNames = getCountyNamesInRegion(regionName);
-    return countyNames.every((countyName) => isCountyFullySelected(regionName, countyName));
-  };
-
-  // Check if any cities in a region are selected
-  const isRegionPartiallySelected = (regionName) => {
-    const countyNames = getCountyNamesInRegion(regionName);
-    return countyNames.some((countyName) => {
-      const cities = getCitiesInCounty(regionName, countyName);
-      return cities.some((cityData) => isCitySelected(cityData.name));
-    }) && !isRegionFullySelected(regionName);
-  };
-
-  // Check if all regions are fully selected (statewide)
-  const isStatewideSelected = () => {
-    const allRegions = getRegionNames();
-    return allRegions.every((regionName) => isRegionFullySelected(regionName));
-  };
-
-  // Check if some but not all regions are selected (partial statewide)
-  const isStatewidePartiallySelected = () => {
-    const allRegions = getRegionNames();
-    const hasAny = allRegions.some((regionName) => {
-      const countyNames = getCountyNamesInRegion(regionName);
-      return countyNames.some((countyName) => {
-        const cities = getCitiesInCounty(regionName, countyName);
-        return cities.some((cityData) => isCitySelected(cityData.name));
-      });
-    });
-    return hasAny && !isStatewideSelected();
-  };
-
-  // Toggle statewide selection
-  const toggleStatewide = () => {
-    const isCurrentlyStatewide = isStatewideSelected();
-
-    if (isCurrentlyStatewide) {
-      // Deselect all
-      setEditedData((prev) => ({
-        ...prev,
-        statewide: false,
-        geographicCities: [],
-        geographicRegions: [],
-        geographicCounties: [],
-      }));
-    } else {
-      // Select all regions, counties, and cities
-      const allRegions = getRegionNames();
-      const allCities = [];
-      const allCounties = [];
-
-      allRegions.forEach((regionName) => {
-        const countyNames = getCountyNamesInRegion(regionName);
-        countyNames.forEach((countyName) => {
-          allCounties.push({ region: regionName, county: countyName });
-          const cities = getCitiesInCounty(regionName, countyName);
-          cities.forEach((cityData) => {
-            allCities.push({
-              city: cityData.name,
-              zipCodes: cityData.zipCodes,
-              county: countyName,
-              region: regionName,
-            });
-          });
-        });
-      });
-
-      setEditedData((prev) => ({
-        ...prev,
-        statewide: true,
-        geographicCities: allCities,
-        geographicRegions: allRegions,
-        geographicCounties: allCounties,
-      }));
-    }
-  };
-
-  // Toggle entire region
-  const toggleRegionSelection = (regionName) => {
-    const isSelected = isRegionFullySelected(regionName);
-    const countyNames = getCountyNamesInRegion(regionName);
-    
-    setEditedData((prev) => {
-      let currentCities = prev.geographicCities || [];
-      let currentRegions = prev.geographicRegions || [];
-      let currentCounties = prev.geographicCounties || [];
-      
-      if (isSelected) {
-        // Deselect all cities in this region
-        currentCities = currentCities.filter((c) => c.region !== regionName);
-        // Remove region from fully selected regions
-        currentRegions = currentRegions.filter((r) => r !== regionName);
-        // Remove all counties in this region from fully selected counties
-        currentCounties = currentCounties.filter((c) => c.region !== regionName);
-      } else {
-        // Select all cities in this region
-        countyNames.forEach((countyName) => {
-          const cities = getCitiesInCounty(regionName, countyName);
-          cities.forEach((cityData) => {
-            if (!currentCities.some((c) => c.city === cityData.name)) {
-              currentCities.push({
-                city: cityData.name,
-                zipCodes: cityData.zipCodes,
-                county: countyName,
-                region: regionName,
-              });
-            }
-          });
-        });
-        // Add region to fully selected regions
-        if (!currentRegions.includes(regionName)) {
-          currentRegions.push(regionName);
-        }
-        // Add all counties in this region to fully selected counties
-        countyNames.forEach((countyName) => {
-          if (!currentCounties.some((c) => c.region === regionName && c.county === countyName)) {
-            currentCounties.push({ region: regionName, county: countyName });
-          }
-        });
-      }
-      
-      return { 
-        ...prev, 
-        geographicCities: currentCities,
-        geographicRegions: currentRegions,
-        geographicCounties: currentCounties
-      };
-    });
-  };
-
-  // Toggle entire county
-  const toggleCountySelection = (regionName, countyName) => {
-    const isSelected = isCountyFullySelected(regionName, countyName);
-    const cities = getCitiesInCounty(regionName, countyName);
-    
-    setEditedData((prev) => {
-      let currentCities = prev.geographicCities || [];
-      let currentRegions = prev.geographicRegions || [];
-      let currentCounties = prev.geographicCounties || [];
-      
-      if (isSelected) {
-        // Deselect all cities in this county
-        currentCities = currentCities.filter(
-          (c) => !(c.county === countyName && c.region === regionName)
-        );
-        // Remove county from fully selected counties
-        currentCounties = currentCounties.filter(
-          (c) => !(c.region === regionName && c.county === countyName)
-        );
-        // Check if region is still fully selected after removing this county
-        const allCountiesInRegion = getCountyNamesInRegion(regionName);
-        const stillFullySelected = allCountiesInRegion.every((cn) =>
-          cn === countyName ? false : currentCounties.some((c) => c.region === regionName && c.county === cn)
-        );
-        if (!stillFullySelected) {
-          currentRegions = currentRegions.filter((r) => r !== regionName);
-        }
-      } else {
-        // Select all cities in this county
-        cities.forEach((cityData) => {
-          if (!currentCities.some((c) => c.city === cityData.name)) {
-            currentCities.push({
-              city: cityData.name,
-              zipCodes: cityData.zipCodes,
-              county: countyName,
-              region: regionName,
-            });
-          }
-        });
-        // Add county to fully selected counties
-        if (!currentCounties.some((c) => c.region === regionName && c.county === countyName)) {
-          currentCounties.push({ region: regionName, county: countyName });
-        }
-        // Check if all counties in region are now selected
-        const allCountiesInRegion = getCountyNamesInRegion(regionName);
-        const allSelected = allCountiesInRegion.every((cn) =>
-          currentCounties.some((c) => c.region === regionName && c.county === cn)
-        );
-        if (allSelected && !currentRegions.includes(regionName)) {
-          currentRegions.push(regionName);
-        }
-      }
-      
-      return { 
-        ...prev, 
-        geographicCities: currentCities,
-        geographicRegions: currentRegions,
-        geographicCounties: currentCounties
-      };
-    });
-  };
-
   // Toggle city selection
   const toggleCity = (cityName, zipCodes, countyName, regionName) => {
     const currentCities = editedData.geographicCities || [];
@@ -529,58 +315,18 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
 
     setEditedData((prev) => {
       let newCities = prev.geographicCities || [];
-      let newRegions = prev.geographicRegions || [];
-      let newCounties = prev.geographicCounties || [];
 
       if (exists) {
         // Remove city
         newCities = newCities.filter((c) => c.city !== cityName);
-
-        // Check if county is still fully selected
-        const allCitiesInCounty = getCitiesInCounty(regionName, countyName);
-        const countyStillFull = allCitiesInCounty.every((cityData) =>
-          cityData.name === cityName ? false : newCities.some((c) => c.city === cityData.name)
-        );
-        if (!countyStillFull) {
-          newCounties = newCounties.filter(
-            (c) => !(c.region === regionName && c.county === countyName)
-          );
-        }
-
-        // Check if region is still fully selected
-        if (!countyStillFull) {
-          newRegions = newRegions.filter((r) => r !== regionName);
-        }
       } else {
         // Add city
         newCities = [...newCities, { city: cityName, zipCodes, county: countyName, region: regionName }];
-
-        // Check if county is now fully selected
-        const allCitiesInCounty = getCitiesInCounty(regionName, countyName);
-        const countyNowFull = allCitiesInCounty.every((cityData) =>
-          newCities.some((c) => c.city === cityData.name)
-        );
-        if (countyNowFull && !newCounties.some((c) => c.region === regionName && c.county === countyName)) {
-          newCounties = [...newCounties, { region: regionName, county: countyName }];
-        }
-
-        // Check if region is now fully selected
-        if (countyNowFull) {
-          const allCountiesInRegion = getCountyNamesInRegion(regionName);
-          const regionNowFull = allCountiesInRegion.every((cn) =>
-            newCounties.some((c) => c.region === regionName && c.county === cn)
-          );
-          if (regionNowFull && !newRegions.includes(regionName)) {
-            newRegions = [...newRegions, regionName];
-          }
-        }
       }
 
       return {
         ...prev,
         geographicCities: newCities,
-        geographicRegions: newRegions,
-        geographicCounties: newCounties
       };
     });
   };
@@ -621,30 +367,12 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
         </div>
       )}
 
-      {/* Entry Status Selection - Edit Mode */}
+      {/* Availability Status - Edit Mode */}
       {isEditing && (
         <div className="mb-6">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Entry Status</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">Availability</h4>
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            {/* Complete vs Stub - Radio buttons */}
-            <div className="flex flex-wrap gap-4 mb-2">
-              {Object.entries(ENTRY_STATUSES).map(([statusKey, statusInfo]) => (
-                <label key={statusKey} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="entryStatus"
-                    value={statusKey}
-                    checked={(editedData.entryStatus || "complete") === statusKey}
-                    onChange={(e) => updateField("entryStatus", e.target.value)}
-                    className="h-4 w-4 border-gray-300 text-brand-blue focus:ring-brand-blue"
-                  />
-                  <span className="text-sm text-gray-700">{statusInfo.label}</span>
-                </label>
-              ))}
-            </div>
-
-            {/* Unavailable - Checkbox */}
-            <label className="flex items-center gap-2 cursor-pointer mt-3">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={editedData.isUnavailable || false}
@@ -657,8 +385,127 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
         </div>
       )}
 
-      {/* Header with Logo (left) and Name (right) - aligned to top */}
+      {/* Header with Name (left) and Logo (right) - aligned to top */}
       <div className="flex items-start gap-4 mb-2 mt-[50px]">
+        <div className="flex-1">
+          {isEditing ? (
+            <>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => updateField("name", e.target.value)}
+                className="w-full text-2xl font-bold text-brand-blue-dark mb-2 px-3 py-2 border border-gray-300 rounded-md"
+              />
+              <select
+                value={organizationType || ""}
+                onChange={(e) => updateField("organizationType", e.target.value)}
+                className="w-full text-sm text-gray-600 px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Select Organization Type</option>
+                {ORGANIZATION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+
+              {/* Special Features Checkboxes */}
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-xs font-semibold text-gray-600 mb-2">Special Features:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editedData.crisisServices === true}
+                      onChange={(e) => updateField("crisisServices", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                    />
+                    <span className="text-sm text-gray-700">Crisis Services</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editedData.spanishSpeaking === true}
+                      onChange={(e) => updateField("spanishSpeaking", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                    />
+                    <span className="text-sm text-gray-700">Spanish Speaking</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editedData.interpretationAvailable === true}
+                      onChange={(e) => updateField("interpretationAvailable", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                    />
+                    <span className="text-sm text-gray-700">Interpretation Available</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editedData.transportationProvided === true}
+                      onChange={(e) => updateField("transportationProvided", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                    />
+                    <span className="text-sm text-gray-700">Transportation Offered</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editedData.autismServices === true}
+                      onChange={(e) => updateField("autismServices", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-red focus:ring-brand-red"
+                    />
+                    <span className="text-sm text-gray-700">Autism Services</span>
+                  </label>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-[36px] font-bold text-brand-blue-dark leading-tight">
+                {name}
+              </h2>
+              {organizationType && (
+                <p className="text-[18px] font-medium text-gray-600">{organizationType}</p>
+              )}
+              {/* Special Features Pills */}
+              {(resource.crisisServices || resource.spanishSpeaking || resource.interpretationAvailable || resource.transportationProvided || resource.autismServices) && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {resource.crisisServices && (
+                    <span className="px-3 py-1 bg-brand-plum text-white text-xs font-medium rounded-full">Crisis Services</span>
+                  )}
+                  {resource.spanishSpeaking && (
+                    <span className="px-3 py-1 bg-brand-plum text-white text-xs font-medium rounded-full">Spanish Speaking</span>
+                  )}
+                  {resource.interpretationAvailable && (
+                    <span className="px-3 py-1 bg-brand-plum text-white text-xs font-medium rounded-full">Interpretation Available</span>
+                  )}
+                  {resource.transportationProvided && (
+                    <span className="px-3 py-1 bg-brand-plum text-white text-xs font-medium rounded-full">Transportation Offered</span>
+                  )}
+                  {resource.autismServices && (
+                    <span className="px-3 py-1 bg-brand-plum text-white text-xs font-medium rounded-full">Autism Services</span>
+                  )}
+                </div>
+              )}
+              {/* Service Domains as pipe-separated text */}
+              {serviceDomains.length > 0 && (
+                <p className="text-xs mt-4">
+                  {serviceDomains.map((domain, index) => (
+                    <span key={domain}>
+                      <span className="text-brand-red">{domain}</span>
+                      {index < serviceDomains.length - 1 && (
+                        <span className="text-brand-gray"> | </span>
+                      )}
+                    </span>
+                  ))}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
         {/* Logo or placeholder - with upload in edit mode */}
         {isEditing ? (
           <div className="flex-shrink-0">
@@ -723,60 +570,7 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
             alt={`${name} logo`}
             className="max-w-[150px] h-auto flex-shrink-0"
           />
-        ) : (
-          <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl font-bold text-gray-400">
-              {name?.charAt(0).toUpperCase()}
-            </span>
-          </div>
-        )}
-
-        <div className="flex-1">
-          {isEditing ? (
-            <>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => updateField("name", e.target.value)}
-                className="w-full text-2xl font-bold text-brand-blue-dark mb-2 px-3 py-2 border border-gray-300 rounded-md"
-              />
-              <select
-                value={organizationType || ""}
-                onChange={(e) => updateField("organizationType", e.target.value)}
-                className="w-full text-sm text-gray-600 px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="">Select Organization Type</option>
-                {ORGANIZATION_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <>
-              <h2 className="text-[36px] font-bold text-brand-blue-dark leading-tight">
-                {name}
-              </h2>
-              {organizationType && (
-                <p className="text-[18px] font-medium text-gray-600">{organizationType}</p>
-              )}
-              {/* Service Domains as pipe-separated text */}
-              {serviceDomains.length > 0 && (
-                <p className="text-xs mt-4">
-                  {serviceDomains.map((domain, index) => (
-                    <span key={domain}>
-                      <span className="text-brand-red">{domain}</span>
-                      {index < serviceDomains.length - 1 && (
-                        <span className="text-brand-gray"> | </span>
-                      )}
-                    </span>
-                  ))}
-                </p>
-              )}
-            </>
-          )}
-        </div>
+        ) : null}
       </div>
 
       {/* Address below name - displayed as separate lines */}
@@ -793,7 +587,7 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
       )}
 
       {/* Contact Info with icons - vertical layout with 30px spacing from address */}
-      {!isEditing && (contactPhone || contactFax || contactEmail || website) && (
+      {!isEditing && (contactPhone || contactFax || contactEmail || contactVP || contactForm || website) && (
         <div className="mt-[30px] space-y-1 mb-4">
           {contactPhone && (
             <a
@@ -804,10 +598,16 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
               <span className="text-sm font-bold text-gray-700">{contactPhone}</span>
             </a>
           )}
+          {contactVP && (
+            <div className="flex items-start gap-2">
+              <PhoneIcon className="h-4 w-4 text-brand-blue flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-gray-700"><span className="font-bold">VP/TTY:</span> {contactVP}</span>
+            </div>
+          )}
           {contactFax && (
             <div className="flex items-start gap-2">
               <PrinterIcon className="h-4 w-4 text-brand-blue flex-shrink-0 mt-0.5" />
-              <span className="text-sm font-bold text-gray-700">{contactFax}</span>
+              <span className="text-sm text-gray-700"><span className="font-bold">Fax:</span> {contactFax}</span>
             </div>
           )}
           {website && (
@@ -830,6 +630,37 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
               <span className="text-sm font-bold text-gray-700">{contactEmail}</span>
             </a>
           )}
+          {contactForm && (
+            <div className="flex items-start gap-2">
+              <GlobeAltIcon className="h-4 w-4 text-brand-blue flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-gray-700">
+                <span className="font-bold">Online contact form:</span>{" "}
+                <a
+                  href={contactForm}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-blue hover:text-brand-red transition-colors underline"
+                >
+                  {contactForm}
+                </a>
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Crisis Line - displayed prominently if available */}
+      {!isEditing && contactCrisis && (
+        <div className="mb-4 inline-block p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <PhoneIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-700">Crisis Line: {contactCrisis}</p>
+              {contactCrisisHours && (
+                <p className="text-xs text-red-600">Available {contactCrisisHours}</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -850,313 +681,338 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
 
 
       {/* Service Area Section - shows region/county/cities with county map */}
-      {!isEditing && geographicCities?.length > 0 && (
+      {!isEditing && (geographicCities?.length > 0 || resource.geographicCoverage === "Nationwide") && (
         <div className="mt-[35px] mb-6 p-4 bg-gray-50 rounded-lg">
-          {/* Top row: Region/County on left, Map on right */}
-          <div className="flex items-start justify-between gap-4">
-            {/* Region/County list on left */}
-            <div className="flex-1">
-              <h3 className="text-[18px] font-bold text-brand-blue-dark mb-2">
-                Service Area
-              </h3>
-              {(() => {
-                const selectedRegions = resource.geographicRegions || [];
-                const uniqueRegions = [...new Set(geographicCities.map(c => c.region))];
-                const uniqueCounties = [...new Set(geographicCities.map(c => c.county))];
-                const allRegionNames = getRegionNames();
+          {(() => {
+            // Calculate coverage level dynamically based on actual selections
+            // Filter out "ghost" cities that don't have valid region/county data
+            const selectedCities = (geographicCities || []).filter(c =>
+              c.city && c.region && c.county &&
+              getRegionNames().includes(c.region) &&
+              getCountyNamesInRegion(c.region).includes(c.county)
+            );
 
-                // Check if statewide (all regions selected)
-                const isStadewide = resource.statewide === true ||
-                  (selectedRegions.length === allRegionNames.length &&
-                   allRegionNames.every(r => selectedRegions.includes(r)));
-
-                if (isStadewide) {
-                  return (
-                    <div className="text-sm text-gray-700">
-                      <p className="font-semibold text-brand-blue-dark">Statewide</p>
-                      <p className="text-gray-500">All Massachusetts communities</p>
+            // Check for Nationwide first
+            if (resource.geographicCoverage === "Nationwide") {
+              return (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-[18px] font-bold text-brand-blue-dark mb-2">
+                        Service Area
+                      </h3>
+                      <div className="text-sm text-gray-700">
+                        <p className="font-semibold text-brand-blue-dark">Nationwide</p>
+                        <p className="text-gray-500">Available across the United States</p>
+                      </div>
                     </div>
-                  );
-                }
-
-                // Determine if we should show full region data
-                let showFullRegion = false;
-
-                // If geographicRegions explicitly set
-                if (selectedRegions.length > 0 && uniqueRegions.length === 1) {
-                  showFullRegion = true;
-                }
-                // Or if multiple counties within one region
-                else if (uniqueCounties.length > 1 && uniqueRegions.length === 1) {
-                  showFullRegion = true;
-                }
-                // Or if all counties in the region are represented (fallback for legacy data)
-                else if (uniqueRegions.length === 1) {
-                  const regionName = uniqueRegions[0];
-                  const regionData = MA_GEOGRAPHIC_DATA[regionName];
-                  if (regionData) {
-                    const allCountiesInRegion = Object.keys(regionData.counties);
-                    const hasAllCounties = allCountiesInRegion.every(county =>
-                      uniqueCounties.includes(county)
-                    );
-                    if (hasAllCounties) {
-                      showFullRegion = true;
-                    }
-                  }
-                }
-
-                // If full region selected, show ALL counties from geography data
-                if (showFullRegion) {
-                  const regionName = uniqueRegions[0];
-                  const regionData = MA_GEOGRAPHIC_DATA[regionName];
-                  const allCounties = regionData ? Object.keys(regionData.counties) : [];
-
-                  return (
-                    <div className="text-sm text-gray-700 space-y-1">
-                      <p>{regionName}</p>
-                      {allCounties.map((county) => (
-                        <p key={county}>{county} County</p>
-                      ))}
-                    </div>
-                  );
-                }
-
-                // Otherwise use what's stored in geographicCities
-                return (
-                  <div className="text-sm text-gray-700 space-y-1">
-                    {uniqueRegions.map((region) => (
-                      <p key={region}>{region}</p>
-                    ))}
-                    {uniqueCounties.map((county) => (
-                      <p key={county}>{county} County</p>
-                    ))}
+                    <img
+                      src="/regions/statewide.png"
+                      alt="Nationwide coverage"
+                      className="h-auto object-contain flex-shrink-0"
+                      style={{ maxWidth: 'min(540px, 50%)' }}
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
                   </div>
-                );
-              })()}
-            </div>
-            {/* Map image on right - show region map if multiple counties or region is fully selected, otherwise county map */}
-            {(() => {
-              const uniqueCounties = [...new Set(geographicCities.map(c => c.county))];
-              const uniqueRegions = [...new Set(geographicCities.map(c => c.region))];
-              const selectedRegions = resource.geographicRegions || [];
-              const allRegionNames = getRegionNames();
+                </>
+              );
+            }
 
-              // Check if statewide - show Massachusetts state map
-              const isStatewide = resource.statewide === true ||
-                (selectedRegions.length === allRegionNames.length &&
-                 allRegionNames.every(r => selectedRegions.includes(r)));
+            // Check for Statewide
+            if (resource.statewide === true) {
+              return (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-[18px] font-bold text-brand-blue-dark mb-2">
+                        Service Area
+                      </h3>
+                      <div className="text-sm text-gray-700">
+                        <p className="font-semibold text-brand-blue-dark">Statewide</p>
+                        <p className="text-gray-500">All Massachusetts communities</p>
+                      </div>
+                    </div>
+                    <img
+                      src="/regions/statewide.png"
+                      alt="Statewide - All Massachusetts"
+                      className="h-auto object-contain flex-shrink-0"
+                      style={{ maxWidth: 'min(540px, 50%)' }}
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  </div>
+                  {/* Communities served - collapsible */}
+                  {selectedCities.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setShowCommunities(!showCommunities)}
+                        className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-brand-blue transition-colors"
+                      >
+                        {showCommunities ? (
+                          <ChevronDownIcon className="h-4 w-4" />
+                        ) : (
+                          <ChevronRightIcon className="h-4 w-4" />
+                        )}
+                        Communities served
+                        <span className="text-gray-400 font-normal ml-1">({selectedCities.length})</span>
+                      </button>
+                      {showCommunities && (
+                        <div className="mt-2 space-y-3">
+                          {getRegionNames().map((regionName) => {
+                            const citiesInRegion = selectedCities.filter(c => c.region === regionName);
+                            if (citiesInRegion.length === 0) return null;
+                            return (
+                              <div key={regionName}>
+                                <p className="text-xs font-semibold text-brand-blue-dark mb-1">{regionName}</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {citiesInRegion.map((cityData, index) => (
+                                    <span key={index} className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                                      {cityData.city || cityData.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            }
 
-              if (isStatewide) {
-                return (
-                  <img
-                    src="/regions/statewide.png"
-                    alt="Statewide - All Massachusetts"
-                    className="h-auto object-contain flex-shrink-0"
-                    style={{ maxWidth: 'min(540px, 50%)' }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
-                );
-              }
+            // Determine coverage level by checking what's fully selected
+            // A region is "fully selected" if all its cities are in geographicCities
+            const fullySelectedRegions = getRegionNames().filter(regionName => {
+              const allCountiesInRegion = getCountyNamesInRegion(regionName);
+              const allCitiesInRegion = allCountiesInRegion.flatMap(county =>
+                getCitiesInCounty(regionName, county).map(c => c.name)
+              );
+              const selectedCitiesInRegion = selectedCities
+                .filter(c => c.region === regionName)
+                .map(c => c.city);
+              return allCitiesInRegion.length > 0 &&
+                allCitiesInRegion.every(city => selectedCitiesInRegion.includes(city));
+            });
 
-              // Special case: Western Mass + Berkshires combined
-              const hasWesternMass = uniqueRegions.includes("Western Mass") || selectedRegions.includes("Western Mass");
-              const hasBerkshires = uniqueRegions.includes("Berkshires") || selectedRegions.includes("Berkshires");
-
-              if (hasWesternMass && hasBerkshires) {
-                return (
-                  <img
-                    src="/regions/western-berks.png"
-                    alt="Western Mass & Berkshires"
-                    className="h-auto object-contain flex-shrink-0"
-                    style={{ maxWidth: 'min(540px, 50%)' }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
-                );
-              }
-
-              // Check if we should show region map
-              let showRegionMap = false;
-
-              // If geographicRegions explicitly set
-              if (selectedRegions.length > 0 && uniqueRegions.length === 1) {
-                showRegionMap = true;
-              }
-              // Or if multiple counties within one region
-              else if (uniqueCounties.length > 1 && uniqueRegions.length === 1) {
-                showRegionMap = true;
-              }
-              // Or if all counties in the region are represented (fallback for legacy data)
-              else if (uniqueRegions.length === 1) {
-                const regionName = uniqueRegions[0];
-                const regionData = MA_GEOGRAPHIC_DATA[regionName];
-                if (regionData) {
-                  const allCountiesInRegion = Object.keys(regionData.counties);
-                  const hasAllCounties = allCountiesInRegion.every(county =>
-                    uniqueCounties.includes(county)
-                  );
-                  if (hasAllCounties) {
-                    showRegionMap = true;
+            // A county is "fully selected" if all its cities are selected (and region is NOT fully selected)
+            const fullySelectedCounties = [];
+            getRegionNames().forEach(regionName => {
+              if (!fullySelectedRegions.includes(regionName)) {
+                getCountyNamesInRegion(regionName).forEach(countyName => {
+                  const citiesInCounty = getCitiesInCounty(regionName, countyName);
+                  const selectedCitiesInCounty = selectedCities
+                    .filter(c => c.region === regionName && c.county === countyName)
+                    .map(c => c.city);
+                  if (citiesInCounty.length > 0 &&
+                      citiesInCounty.every(c => selectedCitiesInCounty.includes(c.name))) {
+                    fullySelectedCounties.push({ region: regionName, county: countyName });
                   }
-                }
+                });
               }
+            });
 
-              if (showRegionMap) {
-                const region = uniqueRegions[0];
-                return (
-                  <img
-                    src={`/regions/${region.toLowerCase().replace(/\s+/g, "-")}.png`}
-                    alt={region}
-                    className="h-auto object-contain flex-shrink-0"
-                    style={{ maxWidth: 'min(540px, 50%)' }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
-                );
-              }
+            // Get cities that are selected but NOT part of a fully selected county or region
+            const looseCities = selectedCities.filter(cityData => {
+              // Not in a fully selected region
+              if (fullySelectedRegions.includes(cityData.region)) return false;
+              // Not in a fully selected county
+              if (fullySelectedCounties.some(c => c.region === cityData.region && c.county === cityData.county)) return false;
+              return true;
+            });
 
-              // Otherwise show first county's map
-              if (geographicCities[0]?.county) {
-                return (
-                  <img
-                    src={`/counties/${geographicCities[0].county.toLowerCase().replace(/\s+/g, "-")}.png`}
-                    alt={`${geographicCities[0].county} County`}
-                    className="h-auto object-contain flex-shrink-0"
-                    style={{ maxWidth: 'min(540px, 50%)' }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
-                );
-              }
-
-              return null;
-            })()}
-          </div>
-
-          {/* Communities served - full width below, collapsible */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => setShowCommunities(!showCommunities)}
-              className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-brand-blue transition-colors"
-            >
-              {showCommunities ? (
-                <ChevronDownIcon className="h-4 w-4" />
-              ) : (
-                <ChevronRightIcon className="h-4 w-4" />
-              )}
-              Communities served
-              {(() => {
-                const selectedRegions = resource.geographicRegions || [];
-                const uniqueRegions = [...new Set(geographicCities.map(c => c.region))];
-                const uniqueCounties = [...new Set(geographicCities.map(c => c.county))];
-                const allRegionNames = getRegionNames();
-
-                // Check if statewide
-                const isStatewide = resource.statewide === true ||
-                  (selectedRegions.length === allRegionNames.length &&
-                   allRegionNames.every(r => selectedRegions.includes(r)));
-
-                if (isStatewide) {
-                  // Count all cities in Massachusetts
-                  let totalCities = 0;
-                  allRegionNames.forEach((regionName) => {
-                    totalCities += getCitiesInRegion(regionName).length;
-                  });
-                  return <span className="text-gray-400 font-normal ml-1">({totalCities})</span>;
-                }
-
-                let showFullRegion = false;
-                if (selectedRegions.length > 0 && uniqueRegions.length === 1) {
-                  showFullRegion = true;
-                } else if (uniqueCounties.length > 1 && uniqueRegions.length === 1) {
-                  showFullRegion = true;
-                } else if (uniqueRegions.length === 1) {
-                  const regionName = uniqueRegions[0];
-                  const regionData = MA_GEOGRAPHIC_DATA[regionName];
-                  if (regionData) {
-                    const allCountiesInRegion = Object.keys(regionData.counties);
-                    if (allCountiesInRegion.every(county => uniqueCounties.includes(county))) {
-                      showFullRegion = true;
-                    }
-                  }
-                }
-                const count = showFullRegion
-                  ? getCitiesInRegion(uniqueRegions[0]).length
-                  : geographicCities.length;
-                return <span className="text-gray-400 font-normal ml-1">({count})</span>;
-              })()}
-            </button>
-            {showCommunities && (
-              <div className="mt-2">
-                {(() => {
-                  const selectedRegions = resource.geographicRegions || [];
-                  const uniqueRegions = [...new Set(geographicCities.map(c => c.region))];
-                  const uniqueCounties = [...new Set(geographicCities.map(c => c.county))];
-                  const allRegionNames = getRegionNames();
-
-                  // Check if statewide
-                  const isStatewide = resource.statewide === true ||
-                    (selectedRegions.length === allRegionNames.length &&
-                     allRegionNames.every(r => selectedRegions.includes(r)));
-
-                  if (isStatewide) {
-                    // Show all cities grouped by region
-                    return (
-                      <div className="space-y-3">
-                        {allRegionNames.map((regionName) => (
+            // If we have fully selected regions, show regional display
+            if (fullySelectedRegions.length > 0) {
+              return (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-[18px] font-bold text-brand-blue-dark mb-2">
+                        Service Area
+                      </h3>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        {fullySelectedRegions.map((regionName) => (
                           <div key={regionName}>
-                            <p className="text-xs font-semibold text-brand-blue-dark mb-1">{regionName}</p>
-                            <div className="flex flex-wrap gap-1">
-                              {getCitiesInRegion(regionName).map((cityData, index) => (
-                                <span key={index} className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                                  {cityData.name}
-                                </span>
-                              ))}
-                            </div>
+                            <p className="font-semibold">{regionName}</p>
+                            {(() => {
+                              const regionData = MA_GEOGRAPHIC_DATA[regionName];
+                              const allCounties = regionData ? Object.keys(regionData.counties) : [];
+                              return allCounties.map((county) => (
+                                <p key={county} className="ml-2 text-gray-500">{county} County</p>
+                              ));
+                            })()}
                           </div>
                         ))}
+                        {/* Also show fully selected counties not in fully selected regions */}
+                        {fullySelectedCounties.length > 0 && (
+                          <div className="mt-2">
+                            {fullySelectedCounties.map((countyData, index) => (
+                              <p key={index}>{countyData.county} County ({countyData.region})</p>
+                            ))}
+                          </div>
+                        )}
+                        {/* Also show loose cities */}
+                        {looseCities.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-gray-500">+ {looseCities.length} additional {looseCities.length === 1 ? 'city' : 'cities'}</p>
+                          </div>
+                        )}
                       </div>
-                    );
-                  }
-
-                  let showFullRegion = false;
-                  if (selectedRegions.length > 0 && uniqueRegions.length === 1) {
-                    showFullRegion = true;
-                  } else if (uniqueCounties.length > 1 && uniqueRegions.length === 1) {
-                    showFullRegion = true;
-                  } else if (uniqueRegions.length === 1) {
-                    const regionName = uniqueRegions[0];
-                    const regionData = MA_GEOGRAPHIC_DATA[regionName];
-                    if (regionData) {
-                      const allCountiesInRegion = Object.keys(regionData.counties);
-                      if (allCountiesInRegion.every(county => uniqueCounties.includes(county))) {
-                        showFullRegion = true;
-                      }
-                    }
-                  }
-
-                  const citiesToShow = showFullRegion
-                    ? getCitiesInRegion(uniqueRegions[0])
-                    : geographicCities;
-
-                  return (
-                    <div className="flex flex-wrap gap-1">
-                      {citiesToShow.map((cityData, index) => (
-                        <span key={index} className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                          {cityData.name || cityData.city}
-                        </span>
-                      ))}
                     </div>
-                  );
-                })()}
+                    {fullySelectedRegions.length === 1 && fullySelectedCounties.length === 0 && looseCities.length === 0 ? (
+                      <img
+                        src={`/regions/${fullySelectedRegions[0].toLowerCase().replace(/\s+/g, "-")}.png`}
+                        alt={fullySelectedRegions[0]}
+                        className="h-auto object-contain flex-shrink-0"
+                        style={{ maxWidth: 'min(540px, 50%)' }}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    ) : (
+                      <img
+                        src="/regions/statewide.png"
+                        alt="Multiple regions"
+                        className="h-auto object-contain flex-shrink-0"
+                        style={{ maxWidth: 'min(540px, 50%)' }}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    )}
+                  </div>
+                  {/* Communities served - collapsible */}
+                  {selectedCities.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setShowCommunities(!showCommunities)}
+                        className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-brand-blue transition-colors"
+                      >
+                        {showCommunities ? (
+                          <ChevronDownIcon className="h-4 w-4" />
+                        ) : (
+                          <ChevronRightIcon className="h-4 w-4" />
+                        )}
+                        Communities served
+                        <span className="text-gray-400 font-normal ml-1">({selectedCities.length})</span>
+                      </button>
+                      {showCommunities && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {selectedCities.map((cityData, index) => (
+                            <span key={index} className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                              {cityData.city || cityData.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            }
+
+            // If we have fully selected counties (but no fully selected regions), show county display
+            if (fullySelectedCounties.length > 0) {
+              return (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-[18px] font-bold text-brand-blue-dark mb-2">
+                        Service Area
+                      </h3>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        {fullySelectedCounties.map((countyData, index) => (
+                          <p key={index}>{countyData.county} County</p>
+                        ))}
+                        {/* Also show loose cities */}
+                        {looseCities.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-gray-500">+ {looseCities.length} additional {looseCities.length === 1 ? 'city' : 'cities'}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {fullySelectedCounties.length === 1 && looseCities.length === 0 ? (
+                      <img
+                        src={`/counties/${fullySelectedCounties[0].county.toLowerCase().replace(/\s+/g, "-")}.png`}
+                        alt={`${fullySelectedCounties[0].county} County`}
+                        className="h-auto object-contain flex-shrink-0"
+                        style={{ maxWidth: 'min(540px, 50%)' }}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    ) : (
+                      <img
+                        src="/regions/statewide.png"
+                        alt="Multiple counties"
+                        className="h-auto object-contain flex-shrink-0"
+                        style={{ maxWidth: 'min(540px, 50%)' }}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    )}
+                  </div>
+                  {/* Communities served - collapsible */}
+                  {selectedCities.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => setShowCommunities(!showCommunities)}
+                        className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-brand-blue transition-colors"
+                      >
+                        {showCommunities ? (
+                          <ChevronDownIcon className="h-4 w-4" />
+                        ) : (
+                          <ChevronRightIcon className="h-4 w-4" />
+                        )}
+                        Communities served
+                        <span className="text-gray-400 font-normal ml-1">({selectedCities.length})</span>
+                      </button>
+                      {showCommunities && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {selectedCities.map((cityData, index) => (
+                            <span key={index} className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                              {cityData.city || cityData.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            }
+
+            // Otherwise, just show cities (city-specific mode - no map)
+            return (
+              <div>
+                <h3 className="text-[18px] font-bold text-brand-blue-dark mb-2">
+                  Service Area
+                </h3>
+                <div className="flex flex-wrap gap-1">
+                  {selectedCities.map((cityData, index) => (
+                    <span key={index} className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                      {cityData.city || cityData.name}
+                    </span>
+                  ))}
+                </div>
               </div>
-            )}
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Office Locations - View Mode */}
+      {!isEditing && geographicOffices && geographicOffices.length > 0 && (
+        <div className="mt-[35px] mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-[18px] font-bold text-brand-blue-dark mb-2">
+            Office Locations
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {geographicOffices.map((office, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 bg-white text-gray-700 text-sm font-medium rounded border border-gray-200"
+              >
+                {office}
+              </span>
+            ))}
           </div>
         </div>
       )}
@@ -1174,57 +1030,6 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
                 className="px-3 py-1 bg-brand-plum text-white text-xs font-medium rounded-full"
               >
                 {pop}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Access & Eligibility (moved before About) - two column layout */}
-      {!isEditing && (accessMethods.length > 0 || eligibilityConstraints.length > 0) && (
-        <div className="mt-[35px] mb-4">
-          <h3 className="text-2xl font-bold text-brand-blue-dark mb-2">
-            Access & Eligibility
-          </h3>
-          <div className="grid grid-cols-2 gap-6">
-            {accessMethods.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-gray-600 mb-2">
-                  How to Access:
-                </p>
-                <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                  {accessMethods.map((method) => (
-                    <li key={method}>{method}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {eligibilityConstraints.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-gray-600 mb-2">
-                  Eligibility:
-                </p>
-                <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                  {eligibilityConstraints.map((constraint) => (
-                    <li key={constraint}>{constraint}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Special Features Badges */}
-      {!isEditing && badges.length > 0 && (
-        <div className="mb-4">
-          <div className="flex flex-wrap gap-2">
-            {badges.map((badge) => (
-              <span
-                key={badge}
-                className="px-3 py-1 bg-brand-plum text-white text-xs font-semibold rounded-full"
-              >
-                {badge}
               </span>
             ))}
           </div>
@@ -1262,12 +1067,87 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
           />
         ) : (
           servicesOffered && (
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {servicesOffered}
-            </p>
+            <div className="text-sm text-gray-700 leading-relaxed">
+              {(() => {
+                // Check if the text has the "Category: items; Category2: items" format
+                // Pattern: Word(s) followed by colon, then items separated by commas, sections separated by semicolons
+                const hasCategories = /^[A-Za-z][A-Za-z\s\/&-]*:\s*.+/.test(servicesOffered.trim());
+
+                if (hasCategories) {
+                  // Split by semicolon to get each category section
+                  const sections = servicesOffered.split(';').map(s => s.trim()).filter(Boolean);
+
+                  return (
+                    <div className="space-y-4">
+                      {sections.map((section, sectionIndex) => {
+                        // Split each section into category and items
+                        const colonIndex = section.indexOf(':');
+                        if (colonIndex === -1) {
+                          // No colon found, just display as-is
+                          return <p key={sectionIndex}>{section}</p>;
+                        }
+
+                        const category = section.substring(0, colonIndex).trim();
+                        const itemsText = section.substring(colonIndex + 1).trim();
+                        const items = itemsText.split(',').map(item => item.trim()).filter(Boolean);
+
+                        return (
+                          <div key={sectionIndex}>
+                            <p className="font-bold text-gray-800 mb-1">{category}</p>
+                            <ul className="list-disc list-inside space-y-0.5 ml-1">
+                              {items.map((item, itemIndex) => (
+                                <li key={itemIndex}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                // No special format detected, display as plain text
+                return <p>{servicesOffered}</p>;
+              })()}
+            </div>
           )
         )}
       </div>
+
+      {/* Access & Eligibility - View Mode - two column layout */}
+      {!isEditing && (accessMethods.length > 0 || eligibilityConstraints.length > 0) && (
+        <div className="mt-[35px] mb-4">
+          <h3 className="text-2xl font-bold text-brand-blue-dark mb-2">
+            Access & Eligibility
+          </h3>
+          <div className="grid grid-cols-2 gap-6">
+            {accessMethods.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-600 mb-2">
+                  How to Access:
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  {accessMethods.map((method) => (
+                    <li key={method}>{method}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {eligibilityConstraints.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-600 mb-2">
+                  Eligibility:
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  {eligibilityConstraints.map((constraint) => (
+                    <li key={constraint}>{constraint}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Service Domains - Edit Mode Only */}
       {isEditing && (
@@ -1408,6 +1288,18 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Videophone / TTY
+              </label>
+              <input
+                type="tel"
+                value={editedData.contactVP || ""}
+                onChange={(e) => updateField("contactVP", e.target.value)}
+                placeholder="(555) 555-5555"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Email
               </label>
               <input
@@ -1432,6 +1324,18 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Online Contact Form URL
+              </label>
+              <input
+                type="url"
+                value={editedData.contactForm || ""}
+                onChange={(e) => updateField("contactForm", e.target.value)}
+                placeholder="https://example.org/contact"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
                 Amazon Wishlist URL
               </label>
               <input
@@ -1441,6 +1345,37 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
                 placeholder="https://www.amazon.com/hz/wishlist/ls/..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
+            </div>
+
+            {/* Crisis Line Section */}
+            <div className="pt-3 border-t border-gray-200">
+              <p className="text-xs font-semibold text-gray-600 mb-2">Crisis Line</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Crisis Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={editedData.contactCrisis || ""}
+                    onChange={(e) => updateField("contactCrisis", e.target.value)}
+                    placeholder="1-800-XXX-XXXX"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Crisis Line Hours
+                  </label>
+                  <input
+                    type="text"
+                    value={editedData.contactCrisisHours || ""}
+                    onChange={(e) => updateField("contactCrisisHours", e.target.value)}
+                    placeholder="24/7 or Mon-Fri 9am-5pm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1520,136 +1455,428 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
         )
       )}
 
-      {/* Communities Served - Edit Mode Only */}
+      {/* Service Area - Edit Mode Only */}
       {isEditing && (
         <div className="mt-[35px] mb-4">
           <h3 className="text-2xl font-bold text-brand-blue-dark mb-2">
-            Communities served
+            Service Area
           </h3>
-          <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-300 rounded-md p-3">
-            {/* Statewide option */}
-            <div className="border-b-2 border-brand-blue pb-3 mb-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isStatewideSelected()}
-                  ref={(el) => {
-                    if (el) {
-                      el.indeterminate = isStatewidePartiallySelected();
-                    }
-                  }}
-                  onChange={toggleStatewide}
-                  className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red"
-                />
-                <span className="text-sm font-bold text-brand-blue-dark">
-                  Statewide (All Massachusetts)
-                </span>
-              </label>
-            </div>
 
-            {getRegionNames().map((regionName) => (
-              <div key={regionName} className="border-b border-gray-200 last:border-b-0 pb-2 last:pb-0">
-                {/* Region Checkbox and Toggle */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={isRegionFullySelected(regionName)}
-                    ref={(el) => {
-                      if (el) {
-                        el.indeterminate = isRegionPartiallySelected(regionName);
-                      }
-                    }}
-                    onChange={() => toggleRegionSelection(regionName)}
-                    className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red"
-                  />
+          {/* Top-level checkboxes: Nationwide and Statewide */}
+          <div className="space-y-3 mb-4">
+            {/* Nationwide checkbox */}
+            <label className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100">
+              <input
+                type="checkbox"
+                checked={editedData.geographicCoverage === "Nationwide"}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    // Set to Nationwide - clear MA-specific data
+                    setEditedData((prev) => ({
+                      ...prev,
+                      geographicCoverage: "Nationwide",
+                      statewide: false,
+                      geographicRegions: [],
+                      geographicCounties: [],
+                      geographicCities: [],
+                    }));
+                  } else {
+                    // Uncheck Nationwide - clear coverage
+                    setEditedData((prev) => ({
+                      ...prev,
+                      geographicCoverage: "",
+                    }));
+                  }
+                }}
+                className="h-5 w-5 border-gray-300 text-brand-red focus:ring-brand-red rounded"
+              />
+              <div>
+                <span className="text-sm font-semibold text-gray-700">Nationwide</span>
+                <p className="text-xs text-gray-500">Available across the United States</p>
+              </div>
+            </label>
+
+            {/* Statewide checkbox */}
+            <label className={`flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 ${editedData.geographicCoverage === "Nationwide" ? "opacity-50" : ""}`}>
+              <input
+                type="checkbox"
+                checked={editedData.statewide === true}
+                disabled={editedData.geographicCoverage === "Nationwide"}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    // Set to Statewide - auto-populate all MA cities
+                    const allCities = [];
+                    const allRegions = getRegionNames();
+                    const allCounties = [];
+
+                    allRegions.forEach((regionName) => {
+                      const countyNames = getCountyNamesInRegion(regionName);
+                      countyNames.forEach((countyName) => {
+                        allCounties.push({ region: regionName, county: countyName });
+                        const cities = getCitiesInCounty(regionName, countyName);
+                        cities.forEach((cityData) => {
+                          allCities.push({
+                            city: cityData.name,
+                            zipCodes: cityData.zipCodes,
+                            county: countyName,
+                            region: regionName,
+                          });
+                        });
+                      });
+                    });
+
+                    setEditedData((prev) => ({
+                      ...prev,
+                      geographicCoverage: "Statewide",
+                      statewide: true,
+                      geographicRegions: allRegions,
+                      geographicCounties: allCounties,
+                      geographicCities: allCities,
+                    }));
+                  } else {
+                    // Uncheck Statewide - clear everything
+                    setEditedData((prev) => ({
+                      ...prev,
+                      geographicCoverage: "",
+                      statewide: false,
+                      geographicRegions: [],
+                      geographicCounties: [],
+                      geographicCities: [],
+                    }));
+                  }
+                }}
+                className="h-5 w-5 border-gray-300 text-brand-red focus:ring-brand-red rounded"
+              />
+              <div>
+                <span className="text-sm font-semibold text-gray-700">Statewide (Massachusetts)</span>
+                <p className="text-xs text-gray-500">Serves all Massachusetts communities</p>
+              </div>
+            </label>
+          </div>
+
+          {/* Hierarchical Tree: Region → County → City */}
+          <div className={`space-y-2 max-h-[500px] overflow-y-auto border border-gray-300 rounded-md p-3 ${(editedData.geographicCoverage === "Nationwide" || editedData.statewide) ? "opacity-50 pointer-events-none" : ""}`}>
+            <p className="text-xs font-semibold text-gray-600 mb-2">
+              Select specific regions, counties, or cities/towns:
+            </p>
+            {getRegionNames().map((regionName) => {
+              // Check if this region is fully selected (all cities in region are selected)
+              const allCountiesInRegion = getCountyNamesInRegion(regionName);
+              const allCitiesInRegion = allCountiesInRegion.flatMap(county =>
+                getCitiesInCounty(regionName, county).map(c => c.name)
+              );
+              const selectedCitiesInRegion = (editedData.geographicCities || [])
+                .filter(c => c.region === regionName)
+                .map(c => c.city);
+              const isRegionFullySelected = allCitiesInRegion.length > 0 &&
+                allCitiesInRegion.every(city => selectedCitiesInRegion.includes(city));
+              const isRegionPartiallySelected = selectedCitiesInRegion.length > 0 && !isRegionFullySelected;
+
+              return (
+                <div key={regionName} className="border-b border-gray-200 last:border-b-0 pb-2 last:pb-0">
+                  {/* Region Row with Checkbox */}
+                  <div className="flex items-center gap-1 py-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleRegion(regionName)}
+                      className="p-0.5 hover:bg-gray-100 rounded"
+                    >
+                      {openRegions[regionName] ? (
+                        <ChevronDownIcon className="h-4 w-4 text-brand-blue" />
+                      ) : (
+                        <ChevronRightIcon className="h-4 w-4 text-brand-blue" />
+                      )}
+                    </button>
+                    <label className="flex items-center gap-2 flex-1 cursor-pointer hover:bg-gray-50 rounded py-1 px-1">
+                      <input
+                        type="checkbox"
+                        checked={isRegionFullySelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = isRegionPartiallySelected;
+                        }}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Select entire region - add all cities/counties in this region
+                            const newCities = [...(editedData.geographicCities || [])];
+                            const newCounties = [...(editedData.geographicCounties || [])];
+                            const newRegions = [...(editedData.geographicRegions || [])];
+
+                            if (!newRegions.includes(regionName)) {
+                              newRegions.push(regionName);
+                            }
+
+                            allCountiesInRegion.forEach((countyName) => {
+                              if (!newCounties.some(c => c.region === regionName && c.county === countyName)) {
+                                newCounties.push({ region: regionName, county: countyName });
+                              }
+                              getCitiesInCounty(regionName, countyName).forEach((cityData) => {
+                                if (!newCities.some(c => c.city === cityData.name)) {
+                                  newCities.push({
+                                    city: cityData.name,
+                                    zipCodes: cityData.zipCodes,
+                                    county: countyName,
+                                    region: regionName,
+                                  });
+                                }
+                              });
+                            });
+
+                            setEditedData((prev) => ({
+                              ...prev,
+                              geographicRegions: newRegions,
+                              geographicCounties: newCounties,
+                              geographicCities: newCities,
+                            }));
+                          } else {
+                            // Deselect entire region - remove all cities/counties in this region
+                            setEditedData((prev) => ({
+                              ...prev,
+                              geographicRegions: (prev.geographicRegions || []).filter(r => r !== regionName),
+                              geographicCounties: (prev.geographicCounties || []).filter(c => c.region !== regionName),
+                              geographicCities: (prev.geographicCities || []).filter(c => c.region !== regionName),
+                            }));
+                          }
+                        }}
+                        className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red rounded"
+                      />
+                      <span className={`text-sm font-semibold ${isRegionFullySelected ? "text-brand-red" : "text-brand-blue-dark"}`}>
+                        {regionName}
+                      </span>
+                      {isRegionFullySelected && (
+                        <span className="text-xs text-gray-500">(entire region)</span>
+                      )}
+                    </label>
+                  </div>
+
+                  {/* Counties in Region */}
+                  {openRegions[regionName] && (
+                    <div className="ml-6 mt-1 space-y-1">
+                      {allCountiesInRegion.map((countyName) => {
+                        const countyKey = `${regionName}-${countyName}`;
+                        const citiesInCounty = getCitiesInCounty(regionName, countyName);
+                        const selectedCitiesInCounty = (editedData.geographicCities || [])
+                          .filter(c => c.region === regionName && c.county === countyName)
+                          .map(c => c.city);
+                        const isCountyFullySelected = citiesInCounty.length > 0 &&
+                          citiesInCounty.every(c => selectedCitiesInCounty.includes(c.name));
+                        const isCountyPartiallySelected = selectedCitiesInCounty.length > 0 && !isCountyFullySelected;
+
+                        // County is disabled if region is fully selected
+                        const isCountyDisabled = isRegionFullySelected;
+
+                        return (
+                          <div key={countyKey}>
+                            {/* County Row with Checkbox */}
+                            <div className="flex items-center gap-1 py-1">
+                              <button
+                                type="button"
+                                onClick={() => toggleCounty(countyKey)}
+                                className="p-0.5 hover:bg-gray-100 rounded"
+                              >
+                                {openCounties[countyKey] ? (
+                                  <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                                ) : (
+                                  <ChevronRightIcon className="h-4 w-4 text-gray-600" />
+                                )}
+                              </button>
+                              <label className={`flex items-center gap-2 flex-1 cursor-pointer hover:bg-gray-50 rounded py-1 px-1 ${isCountyDisabled ? "opacity-50" : ""}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={isCountyFullySelected}
+                                  disabled={isCountyDisabled}
+                                  ref={(el) => {
+                                    if (el) el.indeterminate = isCountyPartiallySelected && !isCountyDisabled;
+                                  }}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      // Select entire county - add all cities in this county
+                                      const newCities = [...(editedData.geographicCities || [])];
+                                      const newCounties = [...(editedData.geographicCounties || [])];
+
+                                      if (!newCounties.some(c => c.region === regionName && c.county === countyName)) {
+                                        newCounties.push({ region: regionName, county: countyName });
+                                      }
+
+                                      citiesInCounty.forEach((cityData) => {
+                                        if (!newCities.some(c => c.city === cityData.name)) {
+                                          newCities.push({
+                                            city: cityData.name,
+                                            zipCodes: cityData.zipCodes,
+                                            county: countyName,
+                                            region: regionName,
+                                          });
+                                        }
+                                      });
+
+                                      setEditedData((prev) => ({
+                                        ...prev,
+                                        geographicCounties: newCounties,
+                                        geographicCities: newCities,
+                                      }));
+                                    } else {
+                                      // Deselect entire county - remove all cities in this county
+                                      // Also remove from geographicRegions if this was the last county
+                                      const newCities = (editedData.geographicCities || [])
+                                        .filter(c => !(c.region === regionName && c.county === countyName));
+                                      const newCounties = (editedData.geographicCounties || [])
+                                        .filter(c => !(c.region === regionName && c.county === countyName));
+
+                                      // Check if any cities remain in this region
+                                      const citiesRemainingInRegion = newCities.filter(c => c.region === regionName);
+                                      const newRegions = citiesRemainingInRegion.length > 0
+                                        ? editedData.geographicRegions || []
+                                        : (editedData.geographicRegions || []).filter(r => r !== regionName);
+
+                                      setEditedData((prev) => ({
+                                        ...prev,
+                                        geographicRegions: newRegions,
+                                        geographicCounties: newCounties,
+                                        geographicCities: newCities,
+                                      }));
+                                    }
+                                  }}
+                                  className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red rounded"
+                                />
+                                <span className={`text-sm font-medium ${isCountyFullySelected ? "text-brand-red" : "text-gray-700"}`}>
+                                  {countyName} County
+                                </span>
+                                {isCountyFullySelected && !isRegionFullySelected && (
+                                  <span className="text-xs text-gray-500">(entire county)</span>
+                                )}
+                              </label>
+                            </div>
+
+                            {/* Cities in County */}
+                            {openCounties[countyKey] && (
+                              <div className="ml-6 mt-1 space-y-1">
+                                {citiesInCounty.map((cityData) => {
+                                  const isCityChecked = selectedCitiesInCounty.includes(cityData.name);
+                                  // City is disabled if county or region is fully selected
+                                  const isCityDisabled = isCountyFullySelected || isRegionFullySelected;
+
+                                  return (
+                                    <label
+                                      key={cityData.name}
+                                      className={`flex items-center gap-2 py-1 px-1 hover:bg-gray-50 rounded cursor-pointer ${isCityDisabled ? "opacity-50" : ""}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isCityChecked}
+                                        disabled={isCityDisabled}
+                                        onChange={() => {
+                                          // Toggle just this city - no effect on parents
+                                          toggleCity(
+                                            cityData.name,
+                                            cityData.zipCodes,
+                                            countyName,
+                                            regionName
+                                          );
+                                        }}
+                                        className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red rounded"
+                                      />
+                                      <span className="text-sm text-gray-700">
+                                        {cityData.name}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Selected count */}
+          <p className="text-xs text-gray-500 mt-2">
+            {(editedData.geographicCities || []).length} cities/towns selected
+            {editedData.statewide && " (Statewide)"}
+            {editedData.geographicCoverage === "Nationwide" && " (Nationwide)"}
+          </p>
+        </div>
+      )}
+
+      {/* Office Locations - Edit Mode */}
+      {isEditing && (
+        <div className="mt-[35px] mb-4">
+          <h3 className="text-2xl font-bold text-brand-blue-dark mb-2">
+            Office Locations
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Cities where this organization has physical offices
+          </p>
+
+          {/* Current office locations */}
+          {(editedData.geographicOffices || []).length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {(editedData.geographicOffices || []).map((office, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded border border-gray-200"
+                >
+                  {office}
                   <button
                     type="button"
-                    onClick={() => toggleRegion(regionName)}
-                    className="flex items-center gap-1 flex-1 text-left py-1 hover:bg-gray-50 rounded"
+                    onClick={() => {
+                      const newOffices = (editedData.geographicOffices || []).filter((_, i) => i !== index);
+                      setEditedData((prev) => ({ ...prev, geographicOffices: newOffices }));
+                    }}
+                    className="ml-1 text-gray-400 hover:text-red-500"
                   >
-                    {openRegions[regionName] ? (
-                      <ChevronDownIcon className="h-4 w-4 text-brand-blue" />
-                    ) : (
-                      <ChevronRightIcon className="h-4 w-4 text-brand-blue" />
-                    )}
-                    <span className="text-sm font-semibold text-brand-blue-dark">
-                      {regionName}
-                    </span>
+                    <XMarkIcon className="h-4 w-4" />
                   </button>
-                </div>
+                </span>
+              ))}
+            </div>
+          )}
 
-                {/* Counties in Region */}
-                {openRegions[regionName] && (
-                  <div className="ml-6 mt-1 space-y-1">
-                    {getCountyNamesInRegion(regionName).map((countyName) => {
-                      const countyKey = `${regionName}-${countyName}`;
-                      return (
-                        <div key={countyKey}>
-                          {/* County Checkbox and Toggle */}
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={isCountyFullySelected(regionName, countyName)}
-                              ref={(el) => {
-                                if (el) {
-                                  el.indeterminate = isCountyPartiallySelected(regionName, countyName);
-                                }
-                              }}
-                              onChange={() => toggleCountySelection(regionName, countyName)}
-                              className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => toggleCounty(countyKey)}
-                              className="flex items-center gap-1 flex-1 text-left py-1 hover:bg-gray-50 rounded"
-                            >
-                              {openCounties[countyKey] ? (
-                                <ChevronDownIcon className="h-4 w-4 text-gray-600" />
-                              ) : (
-                                <ChevronRightIcon className="h-4 w-4 text-gray-600" />
-                              )}
-                              <span className="text-sm font-medium text-gray-700">
-                                {countyName} County
-                              </span>
-                            </button>
-                          </div>
-
-                          {/* Cities in County */}
-                          {openCounties[countyKey] && (
-                            <div className="ml-6 mt-1 space-y-1">
-                              {getCitiesInCounty(regionName, countyName).map((cityData) => (
-                                <label
-                                  key={cityData.name}
-                                  className="flex items-center gap-2 py-1 hover:bg-gray-50 rounded cursor-pointer"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isCitySelected(cityData.name)}
-                                    onChange={() =>
-                                      toggleCity(
-                                        cityData.name,
-                                        cityData.zipCodes,
-                                        countyName,
-                                        regionName
-                                      )
-                                    }
-                                    className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red"
-                                  />
-                                  <span className="text-sm text-gray-700">
-                                    {cityData.name}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
+          {/* Add new office location */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              id="newOfficeLocation"
+              placeholder="Enter city name (e.g., Worcester)"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const value = e.target.value.trim();
+                  if (value && !(editedData.geographicOffices || []).includes(value)) {
+                    setEditedData((prev) => ({
+                      ...prev,
+                      geographicOffices: [...(prev.geographicOffices || []), value],
+                    }));
+                    e.target.value = "";
+                  }
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.getElementById("newOfficeLocation");
+                const value = input.value.trim();
+                if (value && !(editedData.geographicOffices || []).includes(value)) {
+                  setEditedData((prev) => ({
+                    ...prev,
+                    geographicOffices: [...(prev.geographicOffices || []), value],
+                  }));
+                  input.value = "";
+                }
+              }}
+              className="px-4 py-2 bg-brand-blue text-white text-sm font-medium rounded hover:bg-brand-blue-dark transition-colors"
+            >
+              Add
+            </button>
           </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Press Enter or click Add to add a location
+          </p>
         </div>
       )}
 
