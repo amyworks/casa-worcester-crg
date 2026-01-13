@@ -338,6 +338,9 @@ export default function CaseManagement() {
   // Expanded notes for viewing full details
   const [expandedNotes, setExpandedNotes] = useState({});
 
+  // Expanded contacts for viewing full details
+  const [expandedContacts, setExpandedContacts] = useState({});
+
   // Edit mode for case info and issues sections
   const [editingCaseInfo, setEditingCaseInfo] = useState(false);
   const [editingIssues, setEditingIssues] = useState(false);
@@ -384,6 +387,10 @@ export default function CaseManagement() {
 
   const toggleNoteExpanded = (noteId) => {
     setExpandedNotes((prev) => ({ ...prev, [noteId]: !prev[noteId] }));
+  };
+
+  const toggleContactExpanded = (contactKey) => {
+    setExpandedContacts((prev) => ({ ...prev, [contactKey]: !prev[contactKey] }));
   };
 
   // Save case info changes
@@ -1395,33 +1402,88 @@ export default function CaseManagement() {
                     <div className="space-y-2">
                       {REQUIRED_CONTACT_ROLES.map((role) => {
                         const contact = getRequiredContact(role);
+                        const contactKey = `required-${role}`;
+                        const isExpanded = expandedContacts[contactKey];
+                        const hasDetails = contact?.phone || contact?.email || contact?.address || contact?.notes || contact?.attorneyType;
                         return (
                           <div
                             key={role}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-100"
+                            className="bg-gray-50 rounded border border-gray-100 overflow-hidden"
                           >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-700">{role}</span>
-                                {contact?.name && (
-                                  <span className="text-sm text-gray-500">—</span>
-                                )}
-                                {contact?.name && (
-                                  <span className="text-sm text-gray-800 truncate">{contact.name}</span>
+                            <div className="flex items-center justify-between p-3">
+                              <div
+                                className={`flex-1 min-w-0 ${contact?.name && hasDetails ? "cursor-pointer" : ""}`}
+                                onClick={() => contact?.name && hasDetails && toggleContactExpanded(contactKey)}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-700">{role}</span>
+                                  {contact?.name && (
+                                    <span className="text-sm text-gray-800 truncate">{contact.name}</span>
+                                  )}
+                                  {contact?.name && hasDetails && (
+                                    <span className="text-xs text-gray-500 underline ml-2">
+                                      {isExpanded ? "Hide Info" : "View Info"}
+                                    </span>
+                                  )}
+                                </div>
+                                {contact?.company && (
+                                  <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
                                 )}
                               </div>
-                              {contact?.company && (
-                                <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
-                              )}
+                              <button
+                                onClick={() => handleEditRequiredContact(role)}
+                                disabled={actionLoading}
+                                className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded flex-shrink-0"
+                                title={contact?.name ? "Edit" : "Add"}
+                              >
+                                <PencilSquareIcon className="h-4 w-4" />
+                              </button>
                             </div>
-                            <button
-                              onClick={() => handleEditRequiredContact(role)}
-                              disabled={actionLoading}
-                              className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded flex-shrink-0"
-                              title={contact?.name ? "Edit" : "Add"}
-                            >
-                              <PencilSquareIcon className="h-4 w-4" />
-                            </button>
+                            {/* Expanded contact details */}
+                            {isExpanded && contact && (
+                              <div className="px-3 pb-3 pt-1 border-t border-gray-200 bg-white">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                  {contact.phone && (
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500">Phone</span>
+                                      <p className="text-gray-800">
+                                        <a href={`tel:${contact.phone}`} className="text-brand-blue hover:underline">
+                                          {contact.phone}
+                                        </a>
+                                      </p>
+                                    </div>
+                                  )}
+                                  {contact.email && (
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500">Email</span>
+                                      <p className="text-gray-800">
+                                        <a href={`mailto:${contact.email}`} className="text-brand-blue hover:underline break-all">
+                                          {contact.email}
+                                        </a>
+                                      </p>
+                                    </div>
+                                  )}
+                                  {contact.attorneyType && (
+                                    <div>
+                                      <span className="text-xs font-medium text-gray-500">Type</span>
+                                      <p className="text-gray-800">{contact.attorneyType}</p>
+                                    </div>
+                                  )}
+                                  {contact.address && (
+                                    <div className="md:col-span-2">
+                                      <span className="text-xs font-medium text-gray-500">Address</span>
+                                      <p className="text-gray-800 whitespace-pre-line">{contact.address}</p>
+                                    </div>
+                                  )}
+                                  {contact.notes && (
+                                    <div className="md:col-span-2">
+                                      <span className="text-xs font-medium text-gray-500">Notes</span>
+                                      <p className="text-gray-800 whitespace-pre-wrap">{contact.notes}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -1443,47 +1505,107 @@ export default function CaseManagement() {
                     </div>
                     {getAdditionalContacts().length > 0 ? (
                       <div className="space-y-2">
-                        {getAdditionalContacts().map((contact) => (
-                          <div
-                            key={contact.id}
-                            className="flex items-center justify-between p-3 bg-blue-50 rounded border border-blue-100"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                  {contact.role}
-                                </span>
-                                <span className="text-sm text-gray-800 truncate">{contact.name}</span>
+                        {getAdditionalContacts().map((contact) => {
+                          const contactKey = `additional-${contact.id}`;
+                          const isExpanded = expandedContacts[contactKey];
+                          const hasDetails = contact.phone || contact.email || contact.address || contact.notes || contact.attorneyType;
+                          return (
+                            <div
+                              key={contact.id}
+                              className="bg-blue-50 rounded border border-blue-100 overflow-hidden"
+                            >
+                              <div className="flex items-center justify-between p-3">
+                                <div
+                                  className={`flex-1 min-w-0 ${hasDetails ? "cursor-pointer" : ""}`}
+                                  onClick={() => hasDetails && toggleContactExpanded(contactKey)}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                      {contact.role}
+                                    </span>
+                                    <span className="text-sm text-gray-800 truncate">{contact.name}</span>
+                                    {hasDetails && (
+                                      <span className="text-xs text-gray-500 underline ml-2">
+                                        {isExpanded ? "Hide Info" : "View Info"}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {contact.company && (
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
+                                  )}
+                                  {contact.domain && (
+                                    <p className="text-xs text-gray-600 mt-0.5 truncate italic">
+                                      {contact.domain}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <button
+                                    onClick={() => handleEditContact(contact)}
+                                    disabled={actionLoading}
+                                    className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-100 rounded"
+                                    title="Edit"
+                                  >
+                                    <PencilSquareIcon className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteContact(contact.id)}
+                                    disabled={actionLoading}
+                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                    title="Remove"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </div>
-                              {contact.company && (
-                                <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
-                              )}
-                              {contact.domain && (
-                                <p className="text-xs text-gray-600 mt-0.5 truncate italic">
-                                  {contact.domain}
-                                </p>
+                              {/* Expanded contact details */}
+                              {isExpanded && (
+                                <div className="px-3 pb-3 pt-1 border-t border-blue-200 bg-white">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                    {contact.phone && (
+                                      <div>
+                                        <span className="text-xs font-medium text-gray-500">Phone</span>
+                                        <p className="text-gray-800">
+                                          <a href={`tel:${contact.phone}`} className="text-brand-blue hover:underline">
+                                            {contact.phone}
+                                          </a>
+                                        </p>
+                                      </div>
+                                    )}
+                                    {contact.email && (
+                                      <div>
+                                        <span className="text-xs font-medium text-gray-500">Email</span>
+                                        <p className="text-gray-800">
+                                          <a href={`mailto:${contact.email}`} className="text-brand-blue hover:underline break-all">
+                                            {contact.email}
+                                          </a>
+                                        </p>
+                                      </div>
+                                    )}
+                                    {contact.attorneyType && (
+                                      <div>
+                                        <span className="text-xs font-medium text-gray-500">Type</span>
+                                        <p className="text-gray-800">{contact.attorneyType}</p>
+                                      </div>
+                                    )}
+                                    {contact.address && (
+                                      <div className="md:col-span-2">
+                                        <span className="text-xs font-medium text-gray-500">Address</span>
+                                        <p className="text-gray-800 whitespace-pre-line">{contact.address}</p>
+                                      </div>
+                                    )}
+                                    {contact.notes && (
+                                      <div className="md:col-span-2">
+                                        <span className="text-xs font-medium text-gray-500">Notes</span>
+                                        <p className="text-gray-800 whitespace-pre-wrap">{contact.notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                onClick={() => handleEditContact(contact)}
-                                disabled={actionLoading}
-                                className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-100 rounded"
-                                title="Edit"
-                              >
-                                <PencilSquareIcon className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteContact(contact.id)}
-                                disabled={actionLoading}
-                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                                title="Remove"
-                              >
-                                <TrashIcon className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500 text-center py-4">
