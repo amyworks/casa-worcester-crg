@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getCases, createCase, updateCase } from "../firebase/firestore";
 import FamilyMemberForm from "../components/cases/FamilyMemberForm";
 import CaseNoteForm from "../components/cases/CaseNoteForm";
+import CaseContactForm, { REQUIRED_CONTACT_ROLES } from "../components/cases/CaseContactForm";
 import {
   PlusIcon,
   PencilSquareIcon,
@@ -14,6 +15,7 @@ import {
   ExclamationTriangleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  PhoneIcon,
 } from "@heroicons/react/24/solid";
 
 // Case-level dropdown options
@@ -84,7 +86,10 @@ export default function CaseManagement() {
   const [error, setError] = useState(null);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [editingContact, setEditingContact] = useState(null);
+  const [editingContactIsRequired, setEditingContactIsRequired] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Case info fields
@@ -100,6 +105,7 @@ export default function CaseManagement() {
   // Section collapse states
   const [expandedSections, setExpandedSections] = useState({
     caseInfo: true,
+    contacts: true,
     familyMembers: true,
     issues: true,
     notes: true,
@@ -308,6 +314,89 @@ export default function CaseManagement() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // Case contacts handlers
+  const handleEditRequiredContact = (role) => {
+    const existingContact = (caseData.contacts || []).find(c => c.role === role && c.isRequired);
+    setEditingContact(existingContact || { role, isRequired: true });
+    setEditingContactIsRequired(true);
+    setShowContactForm(true);
+  };
+
+  const handleAddContact = () => {
+    setEditingContact(null);
+    setEditingContactIsRequired(false);
+    setShowContactForm(true);
+  };
+
+  const handleEditContact = (contact) => {
+    setEditingContact(contact);
+    setEditingContactIsRequired(contact.isRequired);
+    setShowContactForm(true);
+  };
+
+  const handleSaveContact = async (contactData) => {
+    try {
+      setActionLoading(true);
+      let updatedContacts;
+      const existingContacts = caseData.contacts || [];
+
+      if (editingContact?.id) {
+        // Editing existing contact
+        updatedContacts = existingContacts.map((c) =>
+          c.id === contactData.id ? contactData : c
+        );
+      } else if (contactData.isRequired) {
+        // Adding/updating required contact
+        const existingIndex = existingContacts.findIndex(
+          c => c.role === contactData.role && c.isRequired
+        );
+        if (existingIndex >= 0) {
+          updatedContacts = [...existingContacts];
+          updatedContacts[existingIndex] = contactData;
+        } else {
+          updatedContacts = [...existingContacts, contactData];
+        }
+      } else {
+        // Adding new additional contact
+        updatedContacts = [...existingContacts, contactData];
+      }
+
+      await updateCase(userRecord.id, caseData.id, { contacts: updatedContacts });
+      setCaseData({ ...caseData, contacts: updatedContacts });
+      setShowContactForm(false);
+      setEditingContact(null);
+    } catch (err) {
+      console.error("Error saving contact:", err);
+      setError("Failed to save contact");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteContact = async (contactId) => {
+    try {
+      setActionLoading(true);
+      const updatedContacts = (caseData.contacts || []).filter((c) => c.id !== contactId);
+      await updateCase(userRecord.id, caseData.id, { contacts: updatedContacts });
+      setCaseData({ ...caseData, contacts: updatedContacts });
+    } catch (err) {
+      console.error("Error deleting contact:", err);
+      setError("Failed to delete contact");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Get contact by role (for required contacts)
+  const getRequiredContact = (role) => {
+    return (caseData?.contacts || []).find(c => c.role === role && c.isRequired);
+  };
+
+  // Get additional contacts (non-required)
+  const getAdditionalContacts = () => {
+    return (caseData?.contacts || []).filter(c => !c.isRequired);
   };
 
   const formatMemberLabel = (member) => {
@@ -804,6 +893,150 @@ export default function CaseManagement() {
               )}
             </div>
 
+            {/* Case Contacts Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection("contacts")}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <PhoneIcon className="h-6 w-6 text-brand-blue" />
+                  <div className="text-left">
+                    <h3 className="font-semibold text-brand-blue-dark">Case Contacts</h3>
+                    <p className="text-sm text-gray-600">
+                      {(caseData?.contacts || []).length} contact
+                      {(caseData?.contacts || []).length !== 1 ? "s" : ""} added
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddContact();
+                    }}
+                    disabled={actionLoading}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-brand-blue text-white text-sm font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add
+                  </button>
+                  {expandedSections.contacts ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.contacts && (
+                <div className="p-4 border-t border-gray-200 space-y-6">
+                  {/* Required Court Contacts */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Court Team</h4>
+                    <div className="space-y-2">
+                      {REQUIRED_CONTACT_ROLES.map((role) => {
+                        const contact = getRequiredContact(role);
+                        return (
+                          <div
+                            key={role}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-100"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">{role}</span>
+                                {contact?.name && (
+                                  <span className="text-sm text-gray-500">—</span>
+                                )}
+                                {contact?.name && (
+                                  <span className="text-sm text-gray-800 truncate">{contact.name}</span>
+                                )}
+                              </div>
+                              {contact?.company && (
+                                <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleEditRequiredContact(role)}
+                              disabled={actionLoading}
+                              className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded flex-shrink-0"
+                              title={contact?.name ? "Edit" : "Add"}
+                            >
+                              <PencilSquareIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Additional Contacts */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-gray-700">Additional Contacts</h4>
+                      <button
+                        onClick={handleAddContact}
+                        disabled={actionLoading}
+                        className="flex items-center gap-1 px-2 py-1 text-brand-blue text-sm font-medium hover:bg-blue-50 rounded transition-colors disabled:text-gray-400"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                        Add
+                      </button>
+                    </div>
+                    {getAdditionalContacts().length > 0 ? (
+                      <div className="space-y-2">
+                        {getAdditionalContacts().map((contact) => (
+                          <div
+                            key={contact.id}
+                            className="flex items-center justify-between p-3 bg-blue-50 rounded border border-blue-100"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                  {contact.role}
+                                </span>
+                                <span className="text-sm text-gray-800 truncate">{contact.name}</span>
+                              </div>
+                              {contact.company && (
+                                <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
+                              )}
+                              {contact.domain && (
+                                <p className="text-xs text-gray-600 mt-0.5 truncate italic">
+                                  {contact.domain}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => handleEditContact(contact)}
+                                disabled={actionLoading}
+                                className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-100 rounded"
+                                title="Edit"
+                              >
+                                <PencilSquareIcon className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteContact(contact.id)}
+                                disabled={actionLoading}
+                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Remove"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        No additional contacts added yet. Click "Add" to add contacts like therapists, teachers, or mentors.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Family Members Section */}
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <button
@@ -995,6 +1228,18 @@ export default function CaseManagement() {
           <CaseNoteForm
             onSave={handleSaveNote}
             onCancel={() => setShowNoteForm(false)}
+          />
+        )}
+
+        {showContactForm && (
+          <CaseContactForm
+            contact={editingContact}
+            isRequired={editingContactIsRequired}
+            onSave={handleSaveContact}
+            onCancel={() => {
+              setShowContactForm(false);
+              setEditingContact(null);
+            }}
           />
         )}
       </div>
