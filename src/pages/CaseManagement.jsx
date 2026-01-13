@@ -5,6 +5,8 @@ import { getCases, createCase, updateCase } from "../firebase/firestore";
 import FamilyMemberForm from "../components/cases/FamilyMemberForm";
 import CaseNoteForm from "../components/cases/CaseNoteForm";
 import CaseContactForm, { REQUIRED_CONTACT_ROLES } from "../components/cases/CaseContactForm";
+import VisitationForm from "../components/cases/VisitationForm";
+import VisitationLogForm from "../components/cases/VisitationLogForm";
 import {
   PlusIcon,
   PencilSquareIcon,
@@ -16,6 +18,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   PhoneIcon,
+  CalendarDaysIcon,
 } from "@heroicons/react/24/solid";
 
 // Case-level dropdown options
@@ -58,12 +61,40 @@ const CASE_ISSUES = [
   "Divorce",
 ];
 
-const VISITATION_STATUS_OPTIONS = [
-  "Supervised",
-  "Unsupervised",
-  "Home visit",
-  "Sibling visits",
-];
+// Visitation type labels for display
+const VISITATION_TYPE_LABELS = {
+  sibling: "Sibling Visitation",
+  parental: "Parental Visitation",
+  kinship: "Kinship Visitation",
+  other: "Other Visitation",
+};
+
+// Visitation status colors for badges
+const VISITATION_STATUS_COLORS = {
+  active: "bg-green-100 text-green-800 border-green-200",
+  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  suspended: "bg-red-100 text-red-800 border-red-200",
+  paused: "bg-orange-100 text-orange-800 border-orange-200",
+  revoked: "bg-red-200 text-red-900 border-red-300",
+  completed: "bg-gray-100 text-gray-800 border-gray-200",
+};
+
+// Log entry type colors
+const LOG_ENTRY_TYPE_COLORS = {
+  ordered: "bg-blue-100 text-blue-800",
+  recommended: "bg-blue-50 text-blue-700",
+  started: "bg-green-100 text-green-800",
+  modified: "bg-yellow-100 text-yellow-800",
+  suspended: "bg-red-100 text-red-800",
+  paused: "bg-orange-100 text-orange-800",
+  resumed: "bg-green-50 text-green-700",
+  revoked: "bg-red-200 text-red-900",
+  lapsed: "bg-gray-100 text-gray-800",
+  completed: "bg-gray-200 text-gray-800",
+  behavioral_note: "bg-purple-100 text-purple-800",
+  incident: "bg-red-50 text-red-700",
+  positive_update: "bg-emerald-100 text-emerald-800",
+};
 
 // Child roles for display logic
 const CHILD_ROLES = ["child", "stepsibling", "half sibling", "adoptive sibling"];
@@ -78,6 +109,172 @@ const NOTE_TYPE_COLORS = {
   "Supervision": "bg-orange-100 text-orange-800 border-orange-200",
 };
 
+// VisitationCard component for displaying each visitation arrangement
+function VisitationCard({
+  visitation,
+  expanded,
+  onToggleExpand,
+  onEdit,
+  onDelete,
+  onAddLog,
+  onDeleteLog,
+  getFamilyMemberNames,
+  getAuthorityDisplay,
+  formatDateOnly,
+  actionLoading,
+}) {
+  const statusColor = VISITATION_STATUS_COLORS[visitation.status] || "bg-gray-100 text-gray-800 border-gray-200";
+
+  return (
+    <div className={`rounded border ${statusColor}`}>
+      {/* Header Row */}
+      <div className="flex items-center justify-between p-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-xs font-medium px-2 py-0.5 rounded capitalize ${statusColor}`}>
+              {visitation.status}
+            </span>
+            {visitation.supervision && (
+              <span className="text-xs px-2 py-0.5 bg-white bg-opacity-50 rounded">
+                {visitation.supervision}
+              </span>
+            )}
+            {visitation.frequency && (
+              <span className="text-xs text-gray-600">
+                {visitation.frequency}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-gray-800 mt-1">
+            {getFamilyMemberNames(visitation.familyMemberIds)}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+          <button
+            onClick={onToggleExpand}
+            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-white hover:bg-opacity-50 rounded text-xs font-medium"
+          >
+            {expanded ? "Less" : "More"}
+          </button>
+          <button
+            onClick={onEdit}
+            disabled={actionLoading}
+            className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-white hover:bg-opacity-50 rounded"
+            title="Edit"
+          >
+            <PencilSquareIcon className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={actionLoading}
+            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-white hover:bg-opacity-50 rounded"
+            title="Delete"
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Details */}
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-gray-200 border-opacity-50 mt-2 pt-3 space-y-3">
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="text-xs font-medium text-gray-600">Authority</span>
+              <p className="text-gray-800">{getAuthorityDisplay(visitation)}</p>
+            </div>
+            {visitation.location && (
+              <div>
+                <span className="text-xs font-medium text-gray-600">Location</span>
+                <p className="text-gray-800">{visitation.location}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Permissions */}
+          {visitation.permissions?.length > 0 && (
+            <div>
+              <span className="text-xs font-medium text-gray-600 block mb-1">Permissions</span>
+              <div className="flex flex-wrap gap-1">
+                {visitation.permissions.map((perm) => (
+                  <span
+                    key={perm}
+                    className="text-xs px-2 py-0.5 bg-white bg-opacity-70 rounded border border-gray-200"
+                  >
+                    {perm}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {visitation.notes && (
+            <div>
+              <span className="text-xs font-medium text-gray-600 block mb-1">Notes</span>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{visitation.notes}</p>
+            </div>
+          )}
+
+          {/* Log Entries */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-600">Change Log</span>
+              <button
+                onClick={onAddLog}
+                disabled={actionLoading}
+                className="flex items-center gap-1 text-xs text-brand-blue hover:text-brand-blue-dark font-medium"
+              >
+                <PlusIcon className="h-3 w-3" />
+                Add Entry
+              </button>
+            </div>
+            {visitation.logEntries?.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {visitation.logEntries.map((log) => (
+                  <div
+                    key={log.id}
+                    className={`p-2 rounded text-xs ${LOG_ENTRY_TYPE_COLORS[log.entryType] || "bg-gray-50"}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium capitalize">{log.entryType.replace("_", " ")}</span>
+                        <span className="text-gray-600">{formatDateOnly(log.date)}</span>
+                      </div>
+                      <button
+                        onClick={() => onDeleteLog(log.id)}
+                        disabled={actionLoading}
+                        className="p-0.5 text-gray-500 hover:text-red-600 rounded"
+                        title="Delete entry"
+                      >
+                        <TrashIcon className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <p className="mt-1 text-gray-700">{log.details}</p>
+                    {log.behavioralObservations && (
+                      <p className="mt-1 text-purple-700 italic">
+                        Behavioral: {log.behavioralObservations}
+                      </p>
+                    )}
+                    {log.actionTaken && (
+                      <p className="mt-1 text-gray-600">
+                        Action: {log.actionTaken}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic">No log entries yet</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CaseManagement() {
   const navigate = useNavigate();
   const { userRecord, hasCaseAccess } = useAuth();
@@ -87,9 +284,14 @@ export default function CaseManagement() {
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
+  const [showVisitationForm, setShowVisitationForm] = useState(false);
+  const [showVisitationLogForm, setShowVisitationLogForm] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [editingContact, setEditingContact] = useState(null);
   const [editingContactIsRequired, setEditingContactIsRequired] = useState(false);
+  const [editingVisitation, setEditingVisitation] = useState(null);
+  const [selectedVisitationForLog, setSelectedVisitationForLog] = useState(null);
+  const [expandedVisitations, setExpandedVisitations] = useState({});
   const [actionLoading, setActionLoading] = useState(false);
 
   // Case info fields
@@ -99,14 +301,13 @@ export default function CaseManagement() {
 
   // Case issues
   const [caseIssues, setCaseIssues] = useState([]);
-  const [visitationStatus, setVisitationStatus] = useState([]);
-  const [visitationDetails, setVisitationDetails] = useState("");
 
   // Section collapse states
   const [expandedSections, setExpandedSections] = useState({
     caseInfo: true,
     contacts: true,
     familyMembers: true,
+    visitation: true,
     issues: true,
     notes: true,
   });
@@ -138,8 +339,6 @@ export default function CaseManagement() {
         setCaseDesignation(c.caseDesignation || "");
         setPermanencyGoal(c.permanencyGoal || "");
         setCaseIssues(c.caseIssues || []);
-        setVisitationStatus(c.visitationStatus || []);
-        setVisitationDetails(c.visitationDetails || "");
       } else {
         const newCase = await createCase(userRecord.id);
         setCaseData({ id: newCase.id, familyMembers: [], notes: [] });
@@ -190,14 +389,10 @@ export default function CaseManagement() {
       setActionLoading(true);
       await updateCase(userRecord.id, caseData.id, {
         caseIssues,
-        visitationStatus,
-        visitationDetails,
       });
       setCaseData({
         ...caseData,
         caseIssues,
-        visitationStatus,
-        visitationDetails,
       });
       setEditingIssues(false);
     } catch (err) {
@@ -219,8 +414,6 @@ export default function CaseManagement() {
   // Cancel editing case issues
   const handleCancelCaseIssues = () => {
     setCaseIssues(caseData?.caseIssues || []);
-    setVisitationStatus(caseData?.visitationStatus || []);
-    setVisitationDetails(caseData?.visitationDetails || "");
     setEditingIssues(false);
   };
 
@@ -277,12 +470,6 @@ export default function CaseManagement() {
   const handleIssueToggle = (issue) => {
     setCaseIssues((prev) =>
       prev.includes(issue) ? prev.filter((i) => i !== issue) : [...prev, issue]
-    );
-  };
-
-  const handleVisitationToggle = (status) => {
-    setVisitationStatus((prev) =>
-      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
     );
   };
 
@@ -397,6 +584,158 @@ export default function CaseManagement() {
   // Get additional contacts (non-required)
   const getAdditionalContacts = () => {
     return (caseData?.contacts || []).filter(c => !c.isRequired);
+  };
+
+  // Visitation handlers
+  const handleAddVisitation = () => {
+    setEditingVisitation(null);
+    setShowVisitationForm(true);
+  };
+
+  const handleEditVisitation = (visitation) => {
+    setEditingVisitation(visitation);
+    setShowVisitationForm(true);
+  };
+
+  const handleSaveVisitation = async (visitationData) => {
+    try {
+      setActionLoading(true);
+      let updatedVisitations;
+      const existingVisitations = caseData.visitations || [];
+
+      if (editingVisitation) {
+        updatedVisitations = existingVisitations.map((v) =>
+          v.id === visitationData.id ? visitationData : v
+        );
+      } else {
+        updatedVisitations = [...existingVisitations, visitationData];
+      }
+
+      await updateCase(userRecord.id, caseData.id, { visitations: updatedVisitations });
+      setCaseData({ ...caseData, visitations: updatedVisitations });
+      setShowVisitationForm(false);
+      setEditingVisitation(null);
+    } catch (err) {
+      console.error("Error saving visitation:", err);
+      setError("Failed to save visitation");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteVisitation = async (visitationId) => {
+    if (!window.confirm("Are you sure you want to delete this visitation record? This will also remove all log entries.")) {
+      return;
+    }
+    try {
+      setActionLoading(true);
+      const updatedVisitations = (caseData.visitations || []).filter((v) => v.id !== visitationId);
+      await updateCase(userRecord.id, caseData.id, { visitations: updatedVisitations });
+      setCaseData({ ...caseData, visitations: updatedVisitations });
+    } catch (err) {
+      console.error("Error deleting visitation:", err);
+      setError("Failed to delete visitation");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddLogEntry = (visitationId) => {
+    setSelectedVisitationForLog(visitationId);
+    setShowVisitationLogForm(true);
+  };
+
+  const handleSaveLogEntry = async (logEntry) => {
+    try {
+      setActionLoading(true);
+      const updatedVisitations = (caseData.visitations || []).map((v) => {
+        if (v.id === logEntry.visitationId) {
+          return {
+            ...v,
+            logEntries: [logEntry, ...(v.logEntries || [])],
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return v;
+      });
+
+      await updateCase(userRecord.id, caseData.id, { visitations: updatedVisitations });
+      setCaseData({ ...caseData, visitations: updatedVisitations });
+      setShowVisitationLogForm(false);
+      setSelectedVisitationForLog(null);
+    } catch (err) {
+      console.error("Error adding log entry:", err);
+      setError("Failed to add log entry");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteLogEntry = async (visitationId, logEntryId) => {
+    try {
+      setActionLoading(true);
+      const updatedVisitations = (caseData.visitations || []).map((v) => {
+        if (v.id === visitationId) {
+          return {
+            ...v,
+            logEntries: (v.logEntries || []).filter((l) => l.id !== logEntryId),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return v;
+      });
+
+      await updateCase(userRecord.id, caseData.id, { visitations: updatedVisitations });
+      setCaseData({ ...caseData, visitations: updatedVisitations });
+    } catch (err) {
+      console.error("Error deleting log entry:", err);
+      setError("Failed to delete log entry");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const toggleVisitationExpanded = (visitationId) => {
+    setExpandedVisitations((prev) => ({
+      ...prev,
+      [visitationId]: !prev[visitationId],
+    }));
+  };
+
+  // Get visitations grouped by type
+  const getVisitationsByType = (type) => {
+    return (caseData?.visitations || []).filter((v) => v.type === type);
+  };
+
+  // Get family member names for display
+  const getFamilyMemberNames = (memberIds) => {
+    if (!memberIds || !caseData?.familyMembers) return "";
+    return memberIds
+      .map((id) => {
+        const member = caseData.familyMembers.find((m) => m.id === id);
+        return member ? `${member.firstName} (${member.familyRole})` : "";
+      })
+      .filter(Boolean)
+      .join(", ");
+  };
+
+  // Get authority display text
+  const getAuthorityDisplay = (visitation) => {
+    if (visitation.authorityType === "other") {
+      return visitation.authorityOther || "Other";
+    }
+    if (visitation.authorityContactId && caseData?.contacts) {
+      const contact = caseData.contacts.find((c) => c.id === visitation.authorityContactId);
+      if (contact) {
+        return `${contact.name} (${contact.role})`;
+      }
+    }
+    const typeLabels = {
+      court: "Court Ordered",
+      dcf: "DCF Recommended",
+      agreement: "Family Agreement",
+    };
+    return typeLabels[visitation.authorityType] || visitation.authorityType;
   };
 
   const formatMemberLabel = (member) => {
@@ -798,34 +1137,6 @@ export default function CaseManagement() {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Visitation / Contact Status
-                        </label>
-                        <div className="flex flex-wrap gap-4 mb-3">
-                          {VISITATION_STATUS_OPTIONS.map((status) => (
-                            <label
-                              key={status}
-                              className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={visitationStatus.includes(status)}
-                                onChange={() => handleVisitationToggle(status)}
-                                className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
-                              />
-                              {status}
-                            </label>
-                          ))}
-                        </div>
-                        <textarea
-                          value={visitationDetails}
-                          onChange={(e) => setVisitationDetails(e.target.value)}
-                          placeholder="Describe visitation schedule and boundaries..."
-                          className="w-full h-24 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue resize-y"
-                        />
-                      </div>
-
                       <div className="flex justify-end gap-3">
                         <button
                           onClick={handleCancelCaseIssues}
@@ -844,49 +1155,22 @@ export default function CaseManagement() {
                       </div>
                     </>
                   ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <span className="block text-sm font-medium text-gray-500 mb-2">Issues</span>
-                        {caseIssues.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {caseIssues.map((issue) => (
-                              <span
-                                key={issue}
-                                className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded"
-                              >
-                                {issue}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-500 text-sm">No issues selected</span>
-                        )}
-                      </div>
-
-                      <div>
-                        <span className="block text-sm font-medium text-gray-500 mb-2">
-                          Visitation / Contact Status
-                        </span>
-                        {visitationStatus.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {visitationStatus.map((status) => (
-                              <span
-                                key={status}
-                                className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded"
-                              >
-                                {status}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-500 text-sm">No status selected</span>
-                        )}
-                        {visitationDetails && (
-                          <p className="text-gray-700 text-sm mt-2 whitespace-pre-wrap">
-                            {visitationDetails}
-                          </p>
-                        )}
-                      </div>
+                    <div>
+                      <span className="block text-sm font-medium text-gray-500 mb-2">Issues</span>
+                      {caseIssues.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {caseIssues.map((issue) => (
+                            <span
+                              key={issue}
+                              className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded"
+                            >
+                              {issue}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm">No issues selected</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1116,6 +1400,175 @@ export default function CaseManagement() {
               )}
             </div>
 
+            {/* Visitation Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection("visitation")}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <CalendarDaysIcon className="h-6 w-6 text-brand-blue" />
+                  <div className="text-left">
+                    <h3 className="font-semibold text-brand-blue-dark">Visitation</h3>
+                    <p className="text-sm text-gray-600">
+                      {(caseData?.visitations || []).length} arrangement
+                      {(caseData?.visitations || []).length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddVisitation();
+                    }}
+                    disabled={actionLoading || !caseData?.familyMembers?.length}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-brand-blue text-white text-sm font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                    title={!caseData?.familyMembers?.length ? "Add family members first" : "Add visitation"}
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add
+                  </button>
+                  {expandedSections.visitation ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.visitation && (
+                <div className="p-4 border-t border-gray-200 space-y-6">
+                  {!caseData?.familyMembers?.length ? (
+                    <div className="text-center py-6 text-gray-500">
+                      <CalendarDaysIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                      <p>Add family members first to track visitation.</p>
+                    </div>
+                  ) : (caseData?.visitations || []).length === 0 ? (
+                    <div className="text-center py-6 text-gray-500">
+                      <CalendarDaysIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                      <p>No visitation arrangements added yet.</p>
+                      <p className="text-sm mt-1">Click "Add" to create a visitation record.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Sibling Visitation */}
+                      {getVisitationsByType("sibling").length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                            Sibling Visitation
+                          </h4>
+                          <div className="space-y-3">
+                            {getVisitationsByType("sibling").map((vis) => (
+                              <VisitationCard
+                                key={vis.id}
+                                visitation={vis}
+                                expanded={expandedVisitations[vis.id]}
+                                onToggleExpand={() => toggleVisitationExpanded(vis.id)}
+                                onEdit={() => handleEditVisitation(vis)}
+                                onDelete={() => handleDeleteVisitation(vis.id)}
+                                onAddLog={() => handleAddLogEntry(vis.id)}
+                                onDeleteLog={(logId) => handleDeleteLogEntry(vis.id, logId)}
+                                getFamilyMemberNames={getFamilyMemberNames}
+                                getAuthorityDisplay={getAuthorityDisplay}
+                                formatDateOnly={formatDateOnly}
+                                actionLoading={actionLoading}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Parental Visitation */}
+                      {getVisitationsByType("parental").length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                            Parental Visitation
+                          </h4>
+                          <div className="space-y-3">
+                            {getVisitationsByType("parental").map((vis) => (
+                              <VisitationCard
+                                key={vis.id}
+                                visitation={vis}
+                                expanded={expandedVisitations[vis.id]}
+                                onToggleExpand={() => toggleVisitationExpanded(vis.id)}
+                                onEdit={() => handleEditVisitation(vis)}
+                                onDelete={() => handleDeleteVisitation(vis.id)}
+                                onAddLog={() => handleAddLogEntry(vis.id)}
+                                onDeleteLog={(logId) => handleDeleteLogEntry(vis.id, logId)}
+                                getFamilyMemberNames={getFamilyMemberNames}
+                                getAuthorityDisplay={getAuthorityDisplay}
+                                formatDateOnly={formatDateOnly}
+                                actionLoading={actionLoading}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Kinship Visitation */}
+                      {getVisitationsByType("kinship").length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                            Kinship Visitation
+                          </h4>
+                          <div className="space-y-3">
+                            {getVisitationsByType("kinship").map((vis) => (
+                              <VisitationCard
+                                key={vis.id}
+                                visitation={vis}
+                                expanded={expandedVisitations[vis.id]}
+                                onToggleExpand={() => toggleVisitationExpanded(vis.id)}
+                                onEdit={() => handleEditVisitation(vis)}
+                                onDelete={() => handleDeleteVisitation(vis.id)}
+                                onAddLog={() => handleAddLogEntry(vis.id)}
+                                onDeleteLog={(logId) => handleDeleteLogEntry(vis.id, logId)}
+                                getFamilyMemberNames={getFamilyMemberNames}
+                                getAuthorityDisplay={getAuthorityDisplay}
+                                formatDateOnly={formatDateOnly}
+                                actionLoading={actionLoading}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Other Visitation */}
+                      {getVisitationsByType("other").length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                            Other Visitation
+                          </h4>
+                          <div className="space-y-3">
+                            {getVisitationsByType("other").map((vis) => (
+                              <VisitationCard
+                                key={vis.id}
+                                visitation={vis}
+                                expanded={expandedVisitations[vis.id]}
+                                onToggleExpand={() => toggleVisitationExpanded(vis.id)}
+                                onEdit={() => handleEditVisitation(vis)}
+                                onDelete={() => handleDeleteVisitation(vis.id)}
+                                onAddLog={() => handleAddLogEntry(vis.id)}
+                                onDeleteLog={(logId) => handleDeleteLogEntry(vis.id, logId)}
+                                getFamilyMemberNames={getFamilyMemberNames}
+                                getAuthorityDisplay={getAuthorityDisplay}
+                                formatDateOnly={formatDateOnly}
+                                actionLoading={actionLoading}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Case Notes Section */}
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <button
@@ -1239,6 +1692,30 @@ export default function CaseManagement() {
             onCancel={() => {
               setShowContactForm(false);
               setEditingContact(null);
+            }}
+          />
+        )}
+
+        {showVisitationForm && (
+          <VisitationForm
+            visitation={editingVisitation}
+            familyMembers={caseData?.familyMembers || []}
+            contacts={caseData?.contacts || []}
+            onSave={handleSaveVisitation}
+            onCancel={() => {
+              setShowVisitationForm(false);
+              setEditingVisitation(null);
+            }}
+          />
+        )}
+
+        {showVisitationLogForm && (
+          <VisitationLogForm
+            visitationId={selectedVisitationForLog}
+            onSave={handleSaveLogEntry}
+            onCancel={() => {
+              setShowVisitationLogForm(false);
+              setSelectedVisitationForLog(null);
             }}
           />
         )}
