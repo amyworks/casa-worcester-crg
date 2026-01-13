@@ -8,6 +8,10 @@ import CaseContactForm, { REQUIRED_CONTACT_ROLES } from "../components/cases/Cas
 import VisitationForm from "../components/cases/VisitationForm";
 import VisitationLogForm from "../components/cases/VisitationLogForm";
 import {
+  JUVENILE_COURTS,
+  DCF_AREA_OFFICES,
+} from "../data/massachusettsOffices";
+import {
   PlusIcon,
   PencilSquareIcon,
   TrashIcon,
@@ -40,6 +44,21 @@ const PERMANENCY_GOAL_OPTIONS = [
   "Adoption / guardianship",
   "Independence",
   "Supportive Care (I/DDS)",
+];
+
+// Additional agencies that may be involved (with abbreviations and full names for tooltips)
+const ADDITIONAL_AGENCIES = [
+  { abbrev: "DYS", full: "Department of Youth Services" },
+  { abbrev: "DMH", full: "Department of Mental Health" },
+  { abbrev: "DDS", full: "Department of Developmental Services" },
+  { abbrev: "DTA", full: "Department of Transitional Assistance" },
+  { abbrev: "MassHealth", full: "MassHealth" },
+  { abbrev: "SSI/SSDI", full: "Supplemental Security Income / Social Security Disability Insurance" },
+  { abbrev: "MPS", full: "Massachusetts Probation Service" },
+  { abbrev: "Immigration Services", full: "Immigration Services" },
+  { abbrev: "Housing Authority", full: "Housing Authority" },
+  { abbrev: "School District", full: "School District" },
+  { abbrev: "Early Intervention", full: "Early Intervention" },
 ];
 
 // Case issues (multiselect checkboxes)
@@ -298,6 +317,10 @@ export default function CaseManagement() {
   const [dcfInvolvement, setDcfInvolvement] = useState("");
   const [caseDesignation, setCaseDesignation] = useState("");
   const [permanencyGoal, setPermanencyGoal] = useState("");
+  const [court, setCourt] = useState("");
+  const [dcfOffice, setDcfOffice] = useState("");
+  const [additionalAgencies, setAdditionalAgencies] = useState([]);
+  const [otherAgencies, setOtherAgencies] = useState("");
 
   // Case issues
   const [caseIssues, setCaseIssues] = useState([]);
@@ -338,6 +361,10 @@ export default function CaseManagement() {
         setDcfInvolvement(c.dcfInvolvement || "");
         setCaseDesignation(c.caseDesignation || "");
         setPermanencyGoal(c.permanencyGoal || "");
+        setCourt(c.court || "");
+        setDcfOffice(c.dcfOffice || "");
+        setAdditionalAgencies(c.additionalAgencies || []);
+        setOtherAgencies(c.otherAgencies || "");
         setCaseIssues(c.caseIssues || []);
       } else {
         const newCase = await createCase(userRecord.id);
@@ -367,12 +394,20 @@ export default function CaseManagement() {
         dcfInvolvement,
         caseDesignation,
         permanencyGoal,
+        court,
+        dcfOffice,
+        additionalAgencies,
+        otherAgencies,
       });
       setCaseData({
         ...caseData,
         dcfInvolvement,
         caseDesignation,
         permanencyGoal,
+        court,
+        dcfOffice,
+        additionalAgencies,
+        otherAgencies,
       });
       setEditingCaseInfo(false);
     } catch (err) {
@@ -408,7 +443,18 @@ export default function CaseManagement() {
     setDcfInvolvement(caseData?.dcfInvolvement || "");
     setCaseDesignation(caseData?.caseDesignation || "");
     setPermanencyGoal(caseData?.permanencyGoal || "");
+    setCourt(caseData?.court || "");
+    setDcfOffice(caseData?.dcfOffice || "");
+    setAdditionalAgencies(caseData?.additionalAgencies || []);
+    setOtherAgencies(caseData?.otherAgencies || "");
     setEditingCaseInfo(false);
+  };
+
+  // Toggle additional agency
+  const handleAgencyToggle = (agency) => {
+    setAdditionalAgencies((prev) =>
+      prev.includes(agency) ? prev.filter((a) => a !== agency) : [...prev, agency]
+    );
   };
 
   // Cancel editing case issues
@@ -1043,6 +1089,85 @@ export default function CaseManagement() {
                         </div>
                       </div>
 
+                      {/* Court and DCF Office */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Court
+                          </label>
+                          <select
+                            value={court}
+                            onChange={(e) => setCourt(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                          >
+                            <option value="">Select court...</option>
+                            {JUVENILE_COURTS.map((c) => (
+                              <option key={c.name} value={c.name}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            DCF Area Office
+                          </label>
+                          <select
+                            value={dcfOffice}
+                            onChange={(e) => setDcfOffice(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                          >
+                            <option value="">Select DCF office...</option>
+                            {DCF_AREA_OFFICES.map((office) => (
+                              <option key={office.name} value={office.name}>{office.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Additional Agencies */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Additional Agencies Involved
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                          {ADDITIONAL_AGENCIES.map((agency) => (
+                            <div key={agency.abbrev} className="relative group">
+                              <label
+                                className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1.5 rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={additionalAgencies.includes(agency.abbrev)}
+                                  onChange={() => handleAgencyToggle(agency.abbrev)}
+                                  className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                                />
+                                <span>{agency.abbrev}</span>
+                              </label>
+                              {agency.abbrev !== agency.full && (
+                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded z-50 hidden group-hover:block max-w-xs text-center">
+                                  {agency.full}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Other Agencies */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Other Agencies (specify)
+                        </label>
+                        <textarea
+                          value={otherAgencies}
+                          onChange={(e) => setOtherAgencies(e.target.value)}
+                          placeholder="List any other agencies involved that are not listed above..."
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue resize-y"
+                        />
+                      </div>
+
                       <div className="flex justify-end gap-3">
                         <button
                           onClick={handleCancelCaseInfo}
@@ -1061,19 +1186,68 @@ export default function CaseManagement() {
                       </div>
                     </>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <span className="block text-sm font-medium text-gray-500">DCF Involvement</span>
-                        <span className="text-gray-800">{dcfInvolvement || "Not set"}</span>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <span className="block text-sm font-medium text-gray-500">DCF Involvement</span>
+                          <span className="text-gray-800">{dcfInvolvement || "Not set"}</span>
+                        </div>
+                        <div>
+                          <span className="block text-sm font-medium text-gray-500">Case Designation</span>
+                          <span className="text-gray-800">{caseDesignation || "Not set"}</span>
+                        </div>
+                        <div>
+                          <span className="block text-sm font-medium text-gray-500">Permanency Goal</span>
+                          <span className="text-gray-800">{permanencyGoal || "Not set"}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="block text-sm font-medium text-gray-500">Case Designation</span>
-                        <span className="text-gray-800">{caseDesignation || "Not set"}</span>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <span className="block text-sm font-medium text-gray-500">Court</span>
+                          <span className="text-gray-800">{court || "Not set"}</span>
+                        </div>
+                        <div>
+                          <span className="block text-sm font-medium text-gray-500">DCF Area Office</span>
+                          <span className="text-gray-800">{dcfOffice || "Not set"}</span>
+                        </div>
                       </div>
+
                       <div>
-                        <span className="block text-sm font-medium text-gray-500">Permanency Goal</span>
-                        <span className="text-gray-800">{permanencyGoal || "Not set"}</span>
+                        <span className="block text-sm font-medium text-gray-500 mb-1">Additional Agencies</span>
+                        {additionalAgencies.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {additionalAgencies.map((agencyAbbrev) => {
+                              const agencyData = ADDITIONAL_AGENCIES.find(a => a.abbrev === agencyAbbrev);
+                              const showTooltip = agencyData && agencyData.abbrev !== agencyData.full;
+                              return (
+                                <div key={agencyAbbrev} className="relative group">
+                                  <span
+                                    className="text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded cursor-default inline-block"
+                                  >
+                                    {agencyAbbrev}
+                                  </span>
+                                  {showTooltip && (
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded z-50 hidden group-hover:block max-w-xs text-center">
+                                      {agencyData.full}
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-gray-800">None selected</span>
+                        )}
                       </div>
+
+                      {otherAgencies && (
+                        <div>
+                          <span className="block text-sm font-medium text-gray-500 mb-1">Other Agencies</span>
+                          <p className="text-gray-800 whitespace-pre-wrap">{otherAgencies}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
