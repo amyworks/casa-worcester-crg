@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
+import {
+  JUVENILE_COURTS,
+  ALL_COURTS,
+  DCF_AREA_OFFICES,
+  DYS_REGIONAL_OFFICES,
+  getCourtByName,
+  getDCFOfficeByName,
+  getDYSOfficeByName,
+} from "../../data/massachusettsOffices";
 
 // Required court contacts (always present)
 export const REQUIRED_CONTACT_ROLES = [
@@ -14,24 +23,105 @@ export const REQUIRED_CONTACT_ROLES = [
 
 // Suggested additional roles (user can also enter custom)
 const SUGGESTED_ROLES = [
+  // Court-related roles
+  "Probate & Family Court Judge",
+  "Housing Court Judge",
+  "District Court Judge",
+  "Probation Officer",
+  "DYS Caseworker",
+  // Legal
   "Guardian ad Litem",
-  "Educational Rep",
+  // Care & Treatment
   "Treatment Provider",
   "Placement Provider",
   "Foster Parent",
   "Therapist",
   "Psychiatrist",
+  "Pediatrician",
+  "Case Manager",
+  // Education
+  "Educational Rep",
   "Guidance Counselor",
   "School Principal",
   "Teacher",
+  // Other supportive roles
   "Coach",
   "Mentor",
   "Camp Counselor",
-  "Pediatrician",
-  "Case Manager",
-  "Probation Officer",
   "Other",
 ];
+
+// Attorney representation types
+const ATTORNEY_TYPES = [
+  "Private",
+  "CPCS Appointed",
+];
+
+// Role-specific configuration for labels, placeholders, and dropdown types
+const getRoleConfig = (role) => {
+  switch (role) {
+    case "Judge":
+      return {
+        affiliationLabel: "Court",
+        affiliationPlaceholder: "e.g., Worcester Juvenile Court",
+        showAttorneyType: false,
+        affiliationDropdown: "juvenile-court", // Use juvenile court dropdown only
+      };
+    case "Probate & Family Court Judge":
+    case "Housing Court Judge":
+    case "District Court Judge":
+      return {
+        affiliationLabel: "Court",
+        affiliationPlaceholder: "Select court",
+        showAttorneyType: false,
+        affiliationDropdown: "all-courts", // Use all courts dropdown
+      };
+    case "DCF Social Worker":
+    case "DCF Supervisor":
+      return {
+        affiliationLabel: "DCF Office",
+        affiliationPlaceholder: "e.g., Worcester Area Office",
+        showAttorneyType: false,
+        affiliationDropdown: "dcf", // Use DCF office dropdown
+      };
+    case "DYS Caseworker":
+      return {
+        affiliationLabel: "DYS Office",
+        affiliationPlaceholder: "e.g., DYS Central Regional Office",
+        showAttorneyType: false,
+        affiliationDropdown: "dys", // Use DYS office dropdown
+      };
+    case "State's Attorney":
+      return {
+        affiliationLabel: "Office",
+        affiliationPlaceholder: "e.g., Attorney General's Office",
+        showAttorneyType: false,
+        affiliationDropdown: null,
+      };
+    case "Child(ren)'s Attorney":
+    case "Parent(s)' Attorney":
+      return {
+        affiliationLabel: "Firm / Office",
+        affiliationPlaceholder: "e.g., Law Office of... or CPCS",
+        showAttorneyType: true,
+        affiliationDropdown: null,
+      };
+    case "CASA Supervisor":
+      return {
+        affiliationLabel: "CASA Office",
+        affiliationPlaceholder: "e.g., CASA Project Worcester County",
+        showAttorneyType: false,
+        affiliationDropdown: null,
+      };
+    default:
+      return {
+        affiliationLabel: "Company / Agency",
+        affiliationPlaceholder: "Enter company or agency",
+        showAttorneyType: false,
+        affiliationDropdown: null,
+      };
+  }
+};
 
 export default function CaseContactForm({ contact, isRequired, onSave, onCancel }) {
   const [name, setName] = useState(contact?.name || "");
@@ -40,10 +130,15 @@ export default function CaseContactForm({ contact, isRequired, onSave, onCancel 
   const [phone, setPhone] = useState(contact?.phone || "");
   const [email, setEmail] = useState(contact?.email || "");
   const [company, setCompany] = useState(contact?.company || "");
+  const [attorneyType, setAttorneyType] = useState(contact?.attorneyType || "");
   const [address, setAddress] = useState(contact?.address || "");
   const [domain, setDomain] = useState(contact?.domain || "");
   const [notes, setNotes] = useState(contact?.notes || "");
   const [error, setError] = useState("");
+
+  // Get the current role for config lookup
+  const currentRole = isRequired ? contact?.role : role;
+  const roleConfig = getRoleConfig(currentRole);
 
   // Check if role is a custom one (not in suggested list)
   const isCustomRole = contact?.role &&
@@ -57,6 +152,7 @@ export default function CaseContactForm({ contact, isRequired, onSave, onCancel 
       setPhone(contact.phone || "");
       setEmail(contact.email || "");
       setCompany(contact.company || "");
+      setAttorneyType(contact.attorneyType || "");
       setAddress(contact.address || "");
       setDomain(contact.domain || "");
       setNotes(contact.notes || "");
@@ -113,6 +209,11 @@ export default function CaseContactForm({ contact, isRequired, onSave, onCancel 
       addedAt: contact?.addedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Add attorney type if applicable
+    if (roleConfig.showAttorneyType) {
+      contactData.attorneyType = attorneyType;
+    }
 
     onSave(contactData);
   };
@@ -190,6 +291,25 @@ export default function CaseContactForm({ contact, isRequired, onSave, onCancel 
             />
           </div>
 
+          {/* Attorney Type - only for attorney roles */}
+          {roleConfig.showAttorneyType && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Representation Type
+              </label>
+              <select
+                value={attorneyType}
+                onChange={(e) => setAttorneyType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              >
+                <option value="">Select type...</option>
+                {ATTORNEY_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Phone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -218,18 +338,127 @@ export default function CaseContactForm({ contact, isRequired, onSave, onCancel 
             />
           </div>
 
-          {/* Company / Agency */}
+          {/* Affiliation - role-specific label with optional dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company / Agency Affiliation
+              {roleConfig.affiliationLabel}
             </label>
-            <input
-              type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
-              placeholder="Enter company or agency"
-            />
+            {roleConfig.affiliationDropdown === "juvenile-court" ? (
+              <select
+                value={company}
+                onChange={(e) => {
+                  const selectedCourt = e.target.value;
+                  setCompany(selectedCourt);
+                  if (selectedCourt) {
+                    const courtData = getCourtByName(selectedCourt);
+                    if (courtData) {
+                      setAddress(courtData.address);
+                      setPhone(courtData.phone);
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              >
+                <option value="">Select court...</option>
+                {JUVENILE_COURTS.map((court) => (
+                  <option key={court.name} value={court.name}>
+                    {court.name}
+                  </option>
+                ))}
+              </select>
+            ) : roleConfig.affiliationDropdown === "all-courts" ? (
+              <select
+                value={company}
+                onChange={(e) => {
+                  const selectedCourt = e.target.value;
+                  setCompany(selectedCourt);
+                  if (selectedCourt) {
+                    const courtData = getCourtByName(selectedCourt);
+                    if (courtData) {
+                      setAddress(courtData.address);
+                      setPhone(courtData.phone);
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              >
+                <option value="">Select court...</option>
+                <optgroup label="Juvenile Courts">
+                  {ALL_COURTS.filter(c => c.type === "Juvenile Court").map((court) => (
+                    <option key={court.name} value={court.name}>{court.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Probate & Family Courts">
+                  {ALL_COURTS.filter(c => c.type === "Probate & Family Court").map((court) => (
+                    <option key={court.name} value={court.name}>{court.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Housing Courts">
+                  {ALL_COURTS.filter(c => c.type === "Housing Court").map((court) => (
+                    <option key={court.name} value={court.name}>{court.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="District Courts">
+                  {ALL_COURTS.filter(c => c.type === "District Court").map((court) => (
+                    <option key={court.name} value={court.name}>{court.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+            ) : roleConfig.affiliationDropdown === "dcf" ? (
+              <select
+                value={company}
+                onChange={(e) => {
+                  const selectedOffice = e.target.value;
+                  setCompany(selectedOffice);
+                  if (selectedOffice) {
+                    const officeData = getDCFOfficeByName(selectedOffice);
+                    if (officeData) {
+                      setAddress(officeData.address);
+                      setPhone(officeData.phone);
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              >
+                <option value="">Select DCF office...</option>
+                {DCF_AREA_OFFICES.map((office) => (
+                  <option key={office.name} value={office.name}>
+                    {office.name}
+                  </option>
+                ))}
+              </select>
+            ) : roleConfig.affiliationDropdown === "dys" ? (
+              <select
+                value={company}
+                onChange={(e) => {
+                  const selectedOffice = e.target.value;
+                  setCompany(selectedOffice);
+                  if (selectedOffice) {
+                    const officeData = getDYSOfficeByName(selectedOffice);
+                    if (officeData) {
+                      setAddress(officeData.address);
+                      setPhone(officeData.phone);
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              >
+                <option value="">Select DYS office...</option>
+                {DYS_REGIONAL_OFFICES.map((office) => (
+                  <option key={office.name} value={office.name}>
+                    {office.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                placeholder={roleConfig.affiliationPlaceholder}
+              />
+            )}
           </div>
 
           {/* Mailing Address */}
@@ -245,18 +474,20 @@ export default function CaseContactForm({ contact, isRequired, onSave, onCancel 
             />
           </div>
 
-          {/* Domain / Authority */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Domain / Authority
-            </label>
-            <textarea
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              className="w-full h-20 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue resize-y"
-              placeholder="What decisions do they influence? What do they control?"
-            />
-          </div>
+          {/* Domain / Authority - only for additional contacts */}
+          {!isRequired && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Domain / Authority
+              </label>
+              <textarea
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                className="w-full h-20 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue resize-y"
+                placeholder="What decisions do they influence? What do they control?"
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>
