@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { XMarkIcon, ArrowRightEndOnRectangleIcon, ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, ArrowRightEndOnRectangleIcon, ArrowRightStartOnRectangleIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
 
@@ -109,6 +109,10 @@ export default function ResourceGuideNavigation({ open, onClose, user, userRecor
                   Admin
                 </Link>
               )}
+              <Link to="/user-guide" onClick={onClose} className="flex items-center gap-2 text-3xl font-bold">
+                <QuestionMarkCircleIcon className="h-8 w-8" />
+                Help
+              </Link>
               <button
                 type="button"
                 onClick={handleSignOut}
