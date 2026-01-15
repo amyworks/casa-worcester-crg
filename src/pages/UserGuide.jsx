@@ -138,11 +138,12 @@ export default function UserGuide() {
           "Click \"Sign In\" from the menu",
           "Sign in with your Google account",
           "New users will be asked to complete a brief registration form",
-          "Select your affiliation (CASA Volunteer, Staff, Agency, or General User)",
+          "Select your affiliation (CASA Volunteer, CASA Staff, Agency Affiliate, or General User)",
         ]} />
         <Tip>
           If you're a CASA volunteer or staff member, make sure to select the appropriate affiliation
-          during registration to access additional features.
+          during registration to access additional features. Agency affiliates can later request
+          Manager access to update their organization's listing.
         </Tip>
 
         <SubHeading>User Roles</SubHeading>
@@ -153,8 +154,9 @@ export default function UserGuide() {
           "General Users: Browse and save resources",
           "CASA Volunteers: Browse, save resources, and access case management (if assigned a case)",
           "CASA Staff: Browse, save resources, and may have additional administrative access",
+          "Agency Affiliates: Browse, save resources, and can request Manager access for their organization's listing",
           "Contributors: Can add and edit resources",
-          "Managers: Can manage specific resources and users",
+          "Managers: Can manage specific resources and users assigned to them",
           "Administrators: Full access to all features",
         ]} />
 
@@ -185,10 +187,9 @@ export default function UserGuide() {
         </Paragraph>
         <BulletList items={[
           "Contact information (phone, email, website)",
-          "Address and service locations",
-          "Hours of operation",
+          "Address and service areas",
           "Services offered and eligibility requirements",
-          "Fees and application process",
+          "Referral process (self-referral vs. agency/professional referral)",
         ]} />
         <Tip>
           Look for the phone icon to call directly, or the globe icon to visit the organization's website.
@@ -203,7 +204,7 @@ export default function UserGuide() {
         </Paragraph>
         <BulletList items={[
           "Click the bookmark icon on any resource card",
-          "Gold bookmark = saved, outline = not saved",
+          "Gold bookmark = saved, gray outline = not saved",
           "Access your saved resources from \"Saved Resources\" in the menu",
         ]} />
 
@@ -231,6 +232,22 @@ export default function UserGuide() {
           If you need contributor or administrative access to manage resources, you can submit
           an access request from your profile or the "Request Access" page. An administrator
           will review your request.
+        </Paragraph>
+
+        <SubHeading>Agency Affiliates</SubHeading>
+        <Paragraph>
+          If you registered as someone affiliated with a community organization or agency, you can
+          request Manager access for your organization's resource listing. This allows you to:
+        </Paragraph>
+        <BulletList items={[
+          "Keep your organization's information up to date",
+          "Edit contact details, services offered, and referral information",
+          "Ensure accurate information for families seeking help",
+        ]} />
+        <Paragraph>
+          To request Manager access, visit the <Link to="/request-access" className="text-brand-blue hover:text-brand-red underline">Request Access</Link> page
+          and select the resource listing you're affiliated with. An administrator will verify your
+          affiliation and grant access.
         </Paragraph>
 
         {/* Case Management */}

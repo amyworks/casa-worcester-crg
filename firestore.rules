@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper: Check if user has edit permissions (admin, contributor, or manager)
+    function canEditResources() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'contributor', 'manager'];
+    }
+
+    // Resources - publicly readable, restricted write
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow create: if canEditResources();
+      allow update, delete: if canEditResources();
+    }
+
+    // Users - users can read/write their own document, admins can manage all
+    match /users/{userId} {
+      // Users can read their own profile, admins can read all
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Users can create their own profile during registration
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Users can update their own profile, admins can update any
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Only admins can delete users
+      allow delete: if isAdmin();
+
+      // Case data - STRICTLY private to the owning user only
+      // Even admins cannot access another user's case data
+      match /cases/{caseId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+
+        // Nested case subcollections (if any)
+        match /{subcollection}/{docId} {
+          allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        }
+      }
+    }
+
+    // Access requests - users can create, admins can manage
+    match /accessRequests/{requestId} {
+      // Users can create access requests
+      allow create: if isAuthenticated();
+      // Users can read their own requests, admins can read all
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      // Only admins can update/delete requests
+      allow update, delete: if isAdmin();
+    }
+  }
+}
