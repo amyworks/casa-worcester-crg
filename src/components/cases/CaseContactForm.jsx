@@ -123,7 +123,7 @@ const getRoleConfig = (role) => {
   }
 };
 
-export default function CaseContactForm({ contact, isRequired, onSave, onCancel }) {
+export default function CaseContactForm({ contact, isRequired, caseAgencies = [], onSave, onCancel }) {
   const [name, setName] = useState(contact?.name || "");
   const [role, setRole] = useState(contact?.role || "");
   const [customRole, setCustomRole] = useState("");
@@ -450,6 +450,39 @@ export default function CaseContactForm({ contact, isRequired, onSave, onCancel 
                   </option>
                 ))}
               </select>
+            ) : !isRequired && caseAgencies.length > 0 ? (
+              <>
+                <select
+                  value={caseAgencies.some(a => a.full === company || a.abbrev === company) ? company : (company ? "__other__" : "")}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__other__") {
+                      setCompany("");
+                    } else {
+                      setCompany(val);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                >
+                  <option value="">Select agency...</option>
+                  {caseAgencies.map((agency) => (
+                    <option key={agency.abbrev} value={agency.full}>
+                      {agency.full}
+                    </option>
+                  ))}
+                  <option value="__other__">Other (enter manually)</option>
+                </select>
+                {/* Show text input if "Other" is selected or if company has a custom value */}
+                {(company === "" || (!caseAgencies.some(a => a.full === company || a.abbrev === company) && company !== "")) && (
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    className="w-full mt-2 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                    placeholder="Enter company or agency name"
+                  />
+                )}
+              </>
             ) : (
               <input
                 type="text"

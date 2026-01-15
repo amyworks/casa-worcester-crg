@@ -341,6 +341,9 @@ export default function CaseManagement() {
   // Expanded contacts for viewing full details
   const [expandedContacts, setExpandedContacts] = useState({});
 
+  // Expanded family members for viewing full details
+  const [expandedMembers, setExpandedMembers] = useState({});
+
   // Edit mode for case info and issues sections
   const [editingCaseInfo, setEditingCaseInfo] = useState(false);
   const [editingIssues, setEditingIssues] = useState(false);
@@ -391,6 +394,10 @@ export default function CaseManagement() {
 
   const toggleContactExpanded = (contactKey) => {
     setExpandedContacts((prev) => ({ ...prev, [contactKey]: !prev[contactKey] }));
+  };
+
+  const toggleMemberExpanded = (memberId) => {
+    setExpandedMembers((prev) => ({ ...prev, [memberId]: !prev[memberId] }));
   };
 
   // Save case info changes
@@ -1046,88 +1053,94 @@ export default function CaseManagement() {
                 <div className="p-4 border-t border-gray-200 space-y-4">
                   {editingCaseInfo ? (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            DCF Involvement
-                          </label>
-                          <select
-                            value={dcfInvolvement}
-                            onChange={(e) => setDcfInvolvement(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                          >
-                            <option value="">Select...</option>
-                            {DCF_INVOLVEMENT_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                          </select>
+                      {/* Two column layout: Court on left, DCF/Planning on right */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Left Column: Court Info */}
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-1">Court Info</h4>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Court
+                            </label>
+                            <select
+                              value={court}
+                              onChange={(e) => setCourt(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                            >
+                              <option value="">Select court...</option>
+                              {JUVENILE_COURTS.map((c) => (
+                                <option key={c.name} value={c.name}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Case Designation
+                            </label>
+                            <select
+                              value={caseDesignation}
+                              onChange={(e) => setCaseDesignation(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                            >
+                              <option value="">Select...</option>
+                              {CASE_DESIGNATION_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Case Designation
-                          </label>
-                          <select
-                            value={caseDesignation}
-                            onChange={(e) => setCaseDesignation(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                          >
-                            <option value="">Select...</option>
-                            {CASE_DESIGNATION_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                          </select>
-                        </div>
+                        {/* Right Column: DCF & Case Planning Info */}
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-1">DCF & Case Planning</h4>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              DCF Area Office
+                            </label>
+                            <select
+                              value={dcfOffice}
+                              onChange={(e) => setDcfOffice(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                            >
+                              <option value="">Select DCF office...</option>
+                              {DCF_AREA_OFFICES.map((office) => (
+                                <option key={office.name} value={office.name}>{office.name}</option>
+                              ))}
+                            </select>
+                          </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Permanency Goal
-                          </label>
-                          <select
-                            value={permanencyGoal}
-                            onChange={(e) => setPermanencyGoal(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                          >
-                            <option value="">Select...</option>
-                            {PERMANENCY_GOAL_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              DCF Involvement
+                            </label>
+                            <select
+                              value={dcfInvolvement}
+                              onChange={(e) => setDcfInvolvement(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                            >
+                              <option value="">Select...</option>
+                              {DCF_INVOLVEMENT_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          </div>
 
-                      {/* Court and DCF Office */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Court
-                          </label>
-                          <select
-                            value={court}
-                            onChange={(e) => setCourt(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                          >
-                            <option value="">Select court...</option>
-                            {JUVENILE_COURTS.map((c) => (
-                              <option key={c.name} value={c.name}>{c.name}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            DCF Area Office
-                          </label>
-                          <select
-                            value={dcfOffice}
-                            onChange={(e) => setDcfOffice(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                          >
-                            <option value="">Select DCF office...</option>
-                            {DCF_AREA_OFFICES.map((office) => (
-                              <option key={office.name} value={office.name}>{office.name}</option>
-                            ))}
-                          </select>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Permanency Goal
+                            </label>
+                            <select
+                              value={permanencyGoal}
+                              onChange={(e) => setPermanencyGoal(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                            >
+                              <option value="">Select...</option>
+                              {PERMANENCY_GOAL_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       </div>
 
@@ -1194,67 +1207,513 @@ export default function CaseManagement() {
                     </>
                   ) : (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <span className="block text-sm font-medium text-gray-500">DCF Involvement</span>
-                          <span className="text-gray-800">{dcfInvolvement || "Not set"}</span>
+                      {/* Two column layout: Court on left, DCF/Planning on right */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Left Column: Court Info */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-1">Court Info</h4>
+                          <div>
+                            <span className="block text-sm font-medium text-gray-500">Court</span>
+                            <span className="text-gray-800">{court || "Not set"}</span>
+                          </div>
+                          <div>
+                            <span className="block text-sm font-medium text-gray-500">Case Designation</span>
+                            <span className="text-gray-800">{caseDesignation || "Not set"}</span>
+                          </div>
+                          {/* Judge from contacts */}
+                          {(() => {
+                            const judge = getRequiredContact("Judge");
+                            return judge?.name ? (
+                              <div>
+                                <span className="block text-sm font-medium text-gray-500">Judge</span>
+                                <span className="text-gray-800">{judge.name}</span>
+                                {judge.phone && (
+                                  <span className="text-sm text-gray-600 ml-2">
+                                    <a href={`tel:${judge.phone}`} className="text-brand-blue hover:underline">{judge.phone}</a>
+                                  </span>
+                                )}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
-                        <div>
-                          <span className="block text-sm font-medium text-gray-500">Case Designation</span>
-                          <span className="text-gray-800">{caseDesignation || "Not set"}</span>
-                        </div>
-                        <div>
-                          <span className="block text-sm font-medium text-gray-500">Permanency Goal</span>
-                          <span className="text-gray-800">{permanencyGoal || "Not set"}</span>
+
+                        {/* Right Column: DCF & Case Planning Info */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-1">DCF & Case Planning</h4>
+                          <div>
+                            <span className="block text-sm font-medium text-gray-500">DCF Area Office</span>
+                            <span className="text-gray-800">{dcfOffice || "Not set"}</span>
+                          </div>
+                          <div>
+                            <span className="block text-sm font-medium text-gray-500">DCF Involvement</span>
+                            <span className="text-gray-800">{dcfInvolvement || "Not set"}</span>
+                          </div>
+                          <div>
+                            <span className="block text-sm font-medium text-gray-500">Permanency Goal</span>
+                            <span className="text-gray-800">{permanencyGoal || "Not set"}</span>
+                          </div>
+                          {/* DCF Social Worker from contacts */}
+                          {(() => {
+                            const dcfWorker = getRequiredContact("DCF Social Worker");
+                            return dcfWorker?.name ? (
+                              <div>
+                                <span className="block text-sm font-medium text-gray-500">DCF Social Worker</span>
+                                <span className="text-gray-800">{dcfWorker.name}</span>
+                                {dcfWorker.phone && (
+                                  <span className="text-sm text-gray-600 ml-2">
+                                    <a href={`tel:${dcfWorker.phone}`} className="text-brand-blue hover:underline">{dcfWorker.phone}</a>
+                                  </span>
+                                )}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <span className="block text-sm font-medium text-gray-500">Court</span>
-                          <span className="text-gray-800">{court || "Not set"}</span>
-                        </div>
-                        <div>
-                          <span className="block text-sm font-medium text-gray-500">DCF Area Office</span>
-                          <span className="text-gray-800">{dcfOffice || "Not set"}</span>
-                        </div>
-                      </div>
+                      {/* CASA Supervisor - full width */}
+                      {(() => {
+                        const casaSupervisor = getRequiredContact("CASA Supervisor");
+                        return casaSupervisor?.name ? (
+                          <div className="pt-2 border-t border-gray-100">
+                            <span className="block text-sm font-medium text-gray-500">CASA Supervisor</span>
+                            <span className="text-gray-800">{casaSupervisor.name}</span>
+                            {casaSupervisor.phone && (
+                              <span className="text-sm text-gray-600 ml-2">
+                                <a href={`tel:${casaSupervisor.phone}`} className="text-brand-blue hover:underline">{casaSupervisor.phone}</a>
+                              </span>
+                            )}
+                            {casaSupervisor.email && (
+                              <span className="text-sm text-gray-600 ml-2">
+                                <a href={`mailto:${casaSupervisor.email}`} className="text-brand-blue hover:underline">{casaSupervisor.email}</a>
+                              </span>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
 
-                      <div>
-                        <span className="block text-sm font-medium text-gray-500 mb-1">Additional Agencies</span>
-                        {additionalAgencies.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
+                      {/* Additional Agencies with associated contacts */}
+                      {additionalAgencies.length > 0 && (
+                        <div className="pt-2 border-t border-gray-100">
+                          <span className="block text-sm font-medium text-gray-500 mb-2">Additional Agencies</span>
+                          <div className="space-y-3">
                             {additionalAgencies.map((agencyAbbrev) => {
                               const agencyData = ADDITIONAL_AGENCIES.find(a => a.abbrev === agencyAbbrev);
-                              const showTooltip = agencyData && agencyData.abbrev !== agencyData.full;
+                              // Find contacts associated with this agency (by role containing agency name or company matching)
+                              const agencyContacts = (caseData?.contacts || []).filter(c => {
+                                const role = c.role?.toLowerCase() || "";
+                                const company = c.company?.toLowerCase() || "";
+                                const abbrevLower = agencyAbbrev.toLowerCase();
+                                const fullLower = agencyData?.full?.toLowerCase() || "";
+                                return role.includes(abbrevLower) || role.includes(fullLower) ||
+                                       company.includes(abbrevLower) || company.includes(fullLower);
+                              });
+
                               return (
-                                <div key={agencyAbbrev} className="relative group">
-                                  <span
-                                    className="text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded cursor-default inline-block"
-                                  >
-                                    {agencyAbbrev}
-                                  </span>
-                                  {showTooltip && (
-                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded z-50 hidden group-hover:block max-w-xs text-center">
-                                      {agencyData.full}
-                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                <div key={agencyAbbrev} className="bg-gray-50 rounded p-3">
+                                  <div className="font-medium text-gray-800">
+                                    {agencyData?.full || agencyAbbrev}
+                                  </div>
+                                  {agencyContacts.length > 0 ? (
+                                    <div className="mt-2 space-y-1">
+                                      {agencyContacts.map((contact) => (
+                                        <div key={contact.id} className="text-sm text-gray-600">
+                                          <span className="text-gray-800">{contact.name}</span>
+                                          {contact.role && <span className="text-gray-500"> ({contact.role})</span>}
+                                          {contact.phone && (
+                                            <span className="ml-2">
+                                              <a href={`tel:${contact.phone}`} className="text-brand-blue hover:underline">{contact.phone}</a>
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-500 mt-1 italic">No contacts added for this agency</p>
                                   )}
                                 </div>
                               );
                             })}
                           </div>
-                        ) : (
-                          <span className="text-gray-800">None selected</span>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {otherAgencies && (
-                        <div>
+                        <div className="pt-2 border-t border-gray-100">
                           <span className="block text-sm font-medium text-gray-500 mb-1">Other Agencies</span>
                           <p className="text-gray-800 whitespace-pre-wrap">{otherAgencies}</p>
                         </div>
                       )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Family Members Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => toggleSection("familyMembers")}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <UserGroupIcon className="h-6 w-6 text-brand-blue" />
+                  <div className="text-left">
+                    <h3 className="font-semibold text-brand-blue-dark">Family Members</h3>
+                    <p className="text-sm text-gray-600">
+                      {caseData?.familyMembers?.length || 0} member
+                      {caseData?.familyMembers?.length !== 1 ? "s" : ""} added
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddMember();
+                    }}
+                    disabled={actionLoading}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-brand-blue text-white text-sm font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add
+                  </button>
+                  {expandedSections.familyMembers ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.familyMembers && (
+                <div className="p-4 border-t border-gray-200">
+                  {caseData?.familyMembers?.length > 0 ? (
+                    <div className="space-y-3">
+                      {caseData.familyMembers.map((member) => {
+                        const isChild = CHILD_ROLES.includes(member.familyRole);
+                        const isExpanded = expandedMembers[member.id];
+                        const hasDetails = isChild
+                          ? member.placementType || member.schoolName || member.schoolDistrict || member.extracurriculars || member.hobbiesInterests || member.notes
+                          : member.housingStatus || member.employmentStatus || member.educationLevel || member.agencyInvolvement?.length > 0 || member.individualIssues?.length > 0 || member.notes;
+
+                        return (
+                          <div
+                            key={member.id}
+                            className="rounded border overflow-hidden bg-gray-50 border-gray-200"
+                          >
+                            {/* Header Row - Basic Info */}
+                            <div className="flex items-center justify-between p-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-700 capitalize">
+                                    {member.familyRole}
+                                  </span>
+                                  <span className="text-sm font-medium text-gray-800">
+                                    {member.firstName || "No name"}
+                                  </span>
+                                  <span className="text-xs text-gray-600">
+                                    {member.age}yo {member.gender}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                                <button
+                                  onClick={() => toggleMemberExpanded(member.id)}
+                                  className="text-xs text-gray-500 underline hover:text-brand-blue px-2"
+                                >
+                                  {isExpanded ? "Hide Info" : "View Info"}
+                                </button>
+                                <button
+                                  onClick={() => handleEditMember(member)}
+                                  disabled={actionLoading}
+                                  className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-white hover:bg-opacity-50 rounded"
+                                  title="Edit"
+                                >
+                                  <PencilSquareIcon className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMember(member.id)}
+                                  disabled={actionLoading}
+                                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-white hover:bg-opacity-50 rounded"
+                                  title="Remove"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                              <div className="px-3 pb-3 border-t border-gray-200 bg-white">
+                                {isChild ? (
+                                  /* Child-specific details */
+                                  <div className="pt-3 space-y-3">
+                                    {/* Placement Info */}
+                                    {(member.placementType || member.placementAddress || member.placementContactName) && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Placement</span>
+                                        <div className="mt-1 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                          {member.placementType && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Type:</span>
+                                              <p className="text-gray-800">{member.placementType}</p>
+                                            </div>
+                                          )}
+                                          {member.placementAddress && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Address:</span>
+                                              <p className="text-gray-800">{member.placementAddress}</p>
+                                            </div>
+                                          )}
+                                          {member.placementContactName && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Contact:</span>
+                                              <p className="text-gray-800">
+                                                {member.placementContactName}
+                                                {member.placementContactRole && ` (${member.placementContactRole})`}
+                                              </p>
+                                              {member.placementContactPhone && (
+                                                <p className="text-sm">
+                                                  <a href={`tel:${member.placementContactPhone}`} className="text-brand-blue hover:underline">
+                                                    {member.placementContactPhone}
+                                                  </a>
+                                                </p>
+                                              )}
+                                              {member.placementContactEmail && (
+                                                <p className="text-sm">
+                                                  <a href={`mailto:${member.placementContactEmail}`} className="text-brand-blue hover:underline break-all">
+                                                    {member.placementContactEmail}
+                                                  </a>
+                                                </p>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* School Info */}
+                                    {(member.schoolName || member.schoolDistrict || member.schoolGrade || member.iep504Status) && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">School</span>
+                                        <div className="mt-1 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                          {member.schoolName && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">School:</span>
+                                              <p className="text-gray-800">{member.schoolName}</p>
+                                            </div>
+                                          )}
+                                          {member.schoolDistrict && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">District:</span>
+                                              <p className="text-gray-800">{member.schoolDistrict}</p>
+                                            </div>
+                                          )}
+                                          {member.schoolGrade && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Grade:</span>
+                                              <p className="text-gray-800">{member.schoolGrade}</p>
+                                            </div>
+                                          )}
+                                          {member.iep504Status && member.iep504Status !== "None" && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">IEP/504:</span>
+                                              <p className="text-gray-800">{member.iep504Status}</p>
+                                            </div>
+                                          )}
+                                          {member.teacherName && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Teacher:</span>
+                                              <p className="text-gray-800">{member.teacherName}</p>
+                                            </div>
+                                          )}
+                                          {member.transportation && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Transportation:</span>
+                                              <p className="text-gray-800">{member.transportation}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Activities & Interests */}
+                                    {(member.extracurriculars || member.hobbiesInterests) && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Activities & Interests</span>
+                                        <div className="mt-1 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                          {member.extracurriculars && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Extracurriculars:</span>
+                                              <p className="text-gray-800">{member.extracurriculars}</p>
+                                            </div>
+                                          )}
+                                          {member.hobbiesInterests && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Hobbies/Interests:</span>
+                                              <p className="text-gray-800">{member.hobbiesInterests}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Strengths */}
+                                    {member.strengths && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Strengths</span>
+                                        <p className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">{member.strengths}</p>
+                                      </div>
+                                    )}
+
+                                    {/* Treatment & Services */}
+                                    {(member.treatmentServices?.length > 0 || member.treatmentServicesOther) && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Treatment & Services</span>
+                                        {member.treatmentServices?.length > 0 && (
+                                          <div className="mt-1 flex flex-wrap gap-1">
+                                            {member.treatmentServices.map((service) => (
+                                              <span
+                                                key={service}
+                                                className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded"
+                                              >
+                                                {service}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {member.treatmentServicesOther && (
+                                          <p className="mt-1 text-sm text-gray-700">{member.treatmentServicesOther}</p>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Notes */}
+                                    {member.notes && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Notes</span>
+                                        <p className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">{member.notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  /* Adult-specific details */
+                                  <div className="pt-3 space-y-3">
+                                    {/* Status Info */}
+                                    {(member.housingStatus || member.employmentStatus || member.educationLevel) && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</span>
+                                        <div className="mt-1 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                                          {member.housingStatus && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Housing:</span>
+                                              <p className="text-gray-800">{member.housingStatus}</p>
+                                            </div>
+                                          )}
+                                          {member.employmentStatus && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Employment:</span>
+                                              <p className="text-gray-800">{member.employmentStatus}</p>
+                                            </div>
+                                          )}
+                                          {member.educationLevel && (
+                                            <div>
+                                              <span className="text-xs text-gray-500">Education:</span>
+                                              <p className="text-gray-800">{member.educationLevel}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Agency Involvement */}
+                                    {member.agencyInvolvement?.length > 0 && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Agency Involvement</span>
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                          {member.agencyInvolvement.map((agency) => (
+                                            <span
+                                              key={agency}
+                                              className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded"
+                                            >
+                                              {agency}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Individual Issues */}
+                                    {(member.individualIssues?.length > 0 || member.individualIssuesOther) && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Individual Issues</span>
+                                        {member.individualIssues?.length > 0 && (
+                                          <div className="mt-1 flex flex-wrap gap-1">
+                                            {member.individualIssues.map((issue) => (
+                                              <span
+                                                key={issue}
+                                                className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded"
+                                              >
+                                                {issue}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {member.individualIssuesOther && (
+                                          <p className="mt-1 text-sm text-gray-700">{member.individualIssuesOther}</p>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Strengths */}
+                                    {member.strengths && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Strengths</span>
+                                        <p className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">{member.strengths}</p>
+                                      </div>
+                                    )}
+
+                                    {/* Treatment & Services */}
+                                    {(member.treatmentServices?.length > 0 || member.treatmentServicesOther) && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Treatment & Services</span>
+                                        {member.treatmentServices?.length > 0 && (
+                                          <div className="mt-1 flex flex-wrap gap-1">
+                                            {member.treatmentServices.map((service) => (
+                                              <span
+                                                key={service}
+                                                className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded"
+                                              >
+                                                {service}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {member.treatmentServicesOther && (
+                                          <p className="mt-1 text-sm text-gray-700">{member.treatmentServicesOther}</p>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Notes */}
+                                    {member.notes && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Notes</span>
+                                        <p className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">{member.notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <UserGroupIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+                      <p>No family members added yet.</p>
                     </div>
                   )}
                 </div>
@@ -1408,36 +1867,40 @@ export default function CaseManagement() {
                         return (
                           <div
                             key={role}
-                            className="bg-gray-50 rounded border border-gray-100 overflow-hidden"
+                            className="bg-gray-50 rounded border border-gray-200 overflow-hidden"
                           >
                             <div className="flex items-center justify-between p-3">
-                              <div
-                                className={`flex-1 min-w-0 ${contact?.name && hasDetails ? "cursor-pointer" : ""}`}
-                                onClick={() => contact?.name && hasDetails && toggleContactExpanded(contactKey)}
-                              >
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-gray-700">{role}</span>
+                                  <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded">
+                                    {role}
+                                  </span>
                                   {contact?.name && (
                                     <span className="text-sm text-gray-800 truncate">{contact.name}</span>
-                                  )}
-                                  {contact?.name && hasDetails && (
-                                    <span className="text-xs text-gray-500 underline ml-2">
-                                      {isExpanded ? "Hide Info" : "View Info"}
-                                    </span>
                                   )}
                                 </div>
                                 {contact?.company && (
                                   <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
                                 )}
                               </div>
-                              <button
-                                onClick={() => handleEditRequiredContact(role)}
-                                disabled={actionLoading}
-                                className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded flex-shrink-0"
-                                title={contact?.name ? "Edit" : "Add"}
-                              >
-                                <PencilSquareIcon className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                                {contact?.name && (
+                                  <button
+                                    onClick={() => toggleContactExpanded(contactKey)}
+                                    className="text-xs text-gray-500 underline hover:text-brand-blue px-2"
+                                  >
+                                    {isExpanded ? "Hide Info" : "View Info"}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleEditRequiredContact(role)}
+                                  disabled={actionLoading}
+                                  className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded"
+                                  title={contact?.name ? "Edit" : "Add"}
+                                >
+                                  <PencilSquareIcon className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
                             {/* Expanded contact details */}
                             {isExpanded && contact && (
@@ -1512,23 +1975,15 @@ export default function CaseManagement() {
                           return (
                             <div
                               key={contact.id}
-                              className="bg-blue-50 rounded border border-blue-100 overflow-hidden"
+                              className="bg-gray-50 rounded border border-gray-200 overflow-hidden"
                             >
                               <div className="flex items-center justify-between p-3">
-                                <div
-                                  className={`flex-1 min-w-0 ${hasDetails ? "cursor-pointer" : ""}`}
-                                  onClick={() => hasDetails && toggleContactExpanded(contactKey)}
-                                >
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                    <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded capitalize">
                                       {contact.role}
                                     </span>
                                     <span className="text-sm text-gray-800 truncate">{contact.name}</span>
-                                    {hasDetails && (
-                                      <span className="text-xs text-gray-500 underline ml-2">
-                                        {isExpanded ? "Hide Info" : "View Info"}
-                                      </span>
-                                    )}
                                   </div>
                                   {contact.company && (
                                     <p className="text-xs text-gray-500 mt-0.5 truncate">{contact.company}</p>
@@ -1539,11 +1994,17 @@ export default function CaseManagement() {
                                     </p>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1 flex-shrink-0">
+                                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                                  <button
+                                    onClick={() => toggleContactExpanded(contactKey)}
+                                    className="text-xs text-gray-500 underline hover:text-brand-blue px-2"
+                                  >
+                                    {isExpanded ? "Hide Info" : "View Info"}
+                                  </button>
                                   <button
                                     onClick={() => handleEditContact(contact)}
                                     disabled={actionLoading}
-                                    className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-100 rounded"
+                                    className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded"
                                     title="Edit"
                                   >
                                     <PencilSquareIcon className="h-4 w-4" />
@@ -1560,7 +2021,7 @@ export default function CaseManagement() {
                               </div>
                               {/* Expanded contact details */}
                               {isExpanded && (
-                                <div className="px-3 pb-3 pt-1 border-t border-blue-200 bg-white">
+                                <div className="px-3 pb-3 pt-1 border-t border-gray-200 bg-white">
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                                     {contact.phone && (
                                       <div>
@@ -1613,85 +2074,6 @@ export default function CaseManagement() {
                       </p>
                     )}
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Family Members Section */}
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleSection("familyMembers")}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
-              >
-                <div className="flex items-center gap-3">
-                  <UserGroupIcon className="h-6 w-6 text-brand-blue" />
-                  <div className="text-left">
-                    <h3 className="font-semibold text-brand-blue-dark">Family Members</h3>
-                    <p className="text-sm text-gray-600">
-                      {caseData?.familyMembers?.length || 0} member
-                      {caseData?.familyMembers?.length !== 1 ? "s" : ""} added
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddMember();
-                    }}
-                    disabled={actionLoading}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-brand-blue text-white text-sm font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    Add
-                  </button>
-                  {expandedSections.familyMembers ? (
-                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
-                  )}
-                </div>
-              </button>
-
-              {expandedSections.familyMembers && (
-                <div className="p-4 border-t border-gray-200">
-                  {caseData?.familyMembers?.length > 0 ? (
-                    <div className="space-y-2">
-                      {caseData.familyMembers.map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                        >
-                          <span className="text-gray-800 text-sm">
-                            {formatMemberLabel(member)}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleEditMember(member)}
-                              disabled={actionLoading}
-                              className="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded"
-                              title="Edit"
-                            >
-                              <PencilSquareIcon className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMember(member.id)}
-                              disabled={actionLoading}
-                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                              title="Remove"
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-gray-500">
-                      <UserGroupIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
-                      <p>No family members added yet.</p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1984,6 +2366,9 @@ export default function CaseManagement() {
           <CaseContactForm
             contact={editingContact}
             isRequired={editingContactIsRequired}
+            caseAgencies={additionalAgencies.map(abbrev =>
+              ADDITIONAL_AGENCIES.find(a => a.abbrev === abbrev) || { abbrev, full: abbrev }
+            )}
             onSave={handleSaveContact}
             onCancel={() => {
               setShowContactForm(false);
