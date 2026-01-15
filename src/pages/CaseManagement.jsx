@@ -8,6 +8,8 @@ import CaseNoteForm from "../components/cases/CaseNoteForm";
 import CaseContactForm, { REQUIRED_CONTACT_ROLES } from "../components/cases/CaseContactForm";
 import VisitationForm from "../components/cases/VisitationForm";
 import VisitationLogForm from "../components/cases/VisitationLogForm";
+import Spinner from "../components/ui/Spinner";
+import { CaseManagementSkeleton } from "../components/ui/Skeleton";
 import {
   JUVENILE_COURTS,
   DCF_AREA_OFFICES,
@@ -1067,7 +1069,7 @@ export default function CaseManagement() {
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-600 py-12">Loading case data...</div>
+          <CaseManagementSkeleton />
         ) : (
           <div className="space-y-6">
             {/* Case Information Section */}
@@ -1251,9 +1253,16 @@ export default function CaseManagement() {
                         <button
                           onClick={handleSaveCaseInfo}
                           disabled={actionLoading}
-                          className="px-4 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                          className="px-4 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400 flex items-center gap-2"
                         >
-                          {actionLoading ? "Saving..." : "Save"}
+                          {actionLoading ? (
+                            <>
+                              <Spinner size="sm" color="white" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save"
+                          )}
                         </button>
                       </div>
                     </>
@@ -1840,9 +1849,16 @@ export default function CaseManagement() {
                         <button
                           onClick={handleSaveCaseIssues}
                           disabled={actionLoading}
-                          className="px-4 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400"
+                          className="px-4 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark transition-colors disabled:bg-gray-400 flex items-center gap-2"
                         >
-                          {actionLoading ? "Saving..." : "Save"}
+                          {actionLoading ? (
+                            <>
+                              <Spinner size="sm" color="white" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save"
+                          )}
                         </button>
                       </div>
                     </>

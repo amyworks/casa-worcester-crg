@@ -5,10 +5,10 @@ import { useAuth } from "../contexts/AuthContext";
 import ResourceGuideCard from "../components/resources/ResourceGuideCard";
 import ResourceSearchBar from "../components/resources/ResourceSearchBar";
 import ResourceGuideFilters from "../components/resources/ResourceGuideFilters";
+import { ResourceBrowseSkeleton } from "../components/ui/Skeleton";
 import {
   ArrowUpIcon,
   ArrowDownIcon,
-  Cog6ToothIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
 
@@ -297,9 +297,8 @@ export default function Listings() {
 
         {/* Loading State */}
         {loading && (
-          <div className="mt-8 flex items-center justify-center gap-3 text-gray-600">
-            <Cog6ToothIcon className="h-6 w-6 text-brand-red animate-spin" />
-            <span>Loading resources...</span>
+          <div className="mt-8">
+            <ResourceBrowseSkeleton count={6} />
           </div>
         )}
 

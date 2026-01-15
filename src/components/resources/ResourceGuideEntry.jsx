@@ -14,6 +14,7 @@ import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { updateResource, uploadResourceLogo, addBookmark, removeBookmark } from "../../firebase/firestore";
+import Spinner from "../ui/Spinner";
 import {
   getRegionNames,
   getCountyNamesInRegion,
@@ -379,9 +380,16 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 bg-brand-red text-white font-semibold rounded hover:bg-brand-red-hover transition-colors disabled:bg-gray-400"
+            className="px-4 py-2 bg-brand-red text-white font-semibold rounded hover:bg-brand-red-hover transition-colors disabled:bg-gray-400 flex items-center gap-2"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? (
+              <>
+                <Spinner size="sm" color="white" />
+                Saving...
+              </>
+            ) : (
+              "Save"
+            )}
           </button>
           <button
             onClick={handleCancel}
@@ -1942,9 +1950,16 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 bg-brand-red text-white font-semibold rounded hover:bg-brand-red-hover transition-colors disabled:bg-gray-400"
+            className="px-4 py-2 bg-brand-red text-white font-semibold rounded hover:bg-brand-red-hover transition-colors disabled:bg-gray-400 flex items-center gap-2"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? (
+              <>
+                <Spinner size="sm" color="white" />
+                Saving...
+              </>
+            ) : (
+              "Save"
+            )}
           </button>
           <button
             onClick={handleCancel}

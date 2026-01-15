@@ -3,6 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getResources } from "../firebase/firestore";
 import ResourceGuideCard from "../components/resources/ResourceGuideCard";
+import { ResourceBrowseSkeleton } from "../components/ui/Skeleton";
 import { BookmarkIcon } from "@heroicons/react/24/solid";
 
 export default function SavedResources() {
@@ -54,8 +55,8 @@ export default function SavedResources() {
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center text-gray-600 py-12">
-            Loading saved resources...
+          <div className="py-6">
+            <ResourceBrowseSkeleton count={3} />
           </div>
         )}
 

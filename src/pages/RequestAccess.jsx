@@ -4,6 +4,7 @@ import { auth } from "../firebase/firebase";
 import { createAccessRequest, getUserByEmail } from "../firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useToast } from "../contexts/ToastContext";
+import Spinner from "../components/ui/Spinner";
 
 export default function RequestAccess() {
   const toast = useToast();
@@ -249,9 +250,16 @@ export default function RequestAccess() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full px-6 py-3 bg-brand-red text-white font-semibold rounded-full hover:bg-brand-red-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 bg-brand-red text-white font-semibold rounded-full hover:bg-brand-red-hover transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {submitting ? "Submitting..." : "Submit Request"}
+                {submitting ? (
+                  <>
+                    <Spinner size="sm" color="white" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Request"
+                )}
               </button>
             </div>
           </form>
