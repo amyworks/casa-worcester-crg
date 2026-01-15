@@ -2,9 +2,11 @@ import { signInWithPopup } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { auth, googleProvider } from "../firebase/firebase";
 import { getUserByEmail, createUser } from "../firebase/firestore";
+import { useToast } from "../contexts/ToastContext";
 
 export default function GoogleSignInButton() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const signIn = async () => {
     try {
@@ -61,7 +63,7 @@ export default function GoogleSignInButton() {
       }
     } catch (e) {
       console.error("Sign-in error:", e);
-      alert(e?.message || "Google sign-in failed");
+      toast.error(e?.message || "Google sign-in failed");
     }
   };
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
+import { useToast } from "../../contexts/ToastContext";
 
 // Log entry types for tracking visitation changes
 const LOG_ENTRY_TYPES = [
@@ -19,6 +20,7 @@ const LOG_ENTRY_TYPES = [
 ];
 
 export default function VisitationLogForm({ visitationId, onSave, onCancel }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     entryType: "modified",
     date: new Date().toISOString().split("T")[0],
@@ -36,7 +38,7 @@ export default function VisitationLogForm({ visitationId, onSave, onCancel }) {
     e.preventDefault();
 
     if (!formData.details.trim()) {
-      alert("Please provide details for this log entry");
+      toast.warning("Please provide details for this log entry");
       return;
     }
 

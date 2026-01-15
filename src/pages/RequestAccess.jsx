@@ -3,8 +3,10 @@ import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase/firebase";
 import { createAccessRequest, getUserByEmail } from "../firebase/firestore";
 import { signOut } from "firebase/auth";
+import { useToast } from "../contexts/ToastContext";
 
 export default function RequestAccess() {
+  const toast = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const reason = searchParams.get("reason");
@@ -56,9 +58,10 @@ export default function RequestAccess() {
         currentRole: userRecord?.role || "volunteer",
       });
       setSubmitted(true);
+      toast.success("Request submitted successfully");
     } catch (error) {
       console.error("Error submitting request:", error);
-      alert("Failed to submit request. Please try again.");
+      toast.error("Failed to submit request. Please try again.");
     } finally {
       setSubmitting(false);
     }

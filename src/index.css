@@ -14,4 +14,18 @@
   --color-brand-red-hover: #F02719;
   --color-brand-white: #FEFEFE;
   --color-brand-gray: #CCCCCC;
+
+  /* Animations */
+  --animate-slide-in: slide-in 0.3s ease-out;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }

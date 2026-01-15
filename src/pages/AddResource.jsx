@@ -7,6 +7,7 @@ import {
   ChevronRightIcon,
 } from "@heroicons/react/24/solid";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { addResource, uploadResourceLogo } from "../firebase/firestore";
 import {
   getRegionNames,
@@ -99,6 +100,7 @@ const ENTRY_STATUSES = {
 export default function AddResource() {
   const navigate = useNavigate();
   const { userRecord, isAdmin } = useAuth();
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -167,11 +169,11 @@ export default function AddResource() {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        alert("Please select an image file");
+        toast.warning("Please select an image file");
         return;
       }
       if (file.size > 2 * 1024 * 1024) {
-        alert("Image must be less than 2MB");
+        toast.warning("Image must be less than 2MB");
         return;
       }
       setLogoFile(file);

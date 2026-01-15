@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
+import { useToast } from "../../contexts/ToastContext";
 
 // Visitation type options
 const VISITATION_TYPES = [
@@ -68,6 +69,7 @@ export default function VisitationForm({
   onSave,
   onCancel,
 }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     id: "",
     type: "sibling",
@@ -150,7 +152,7 @@ export default function VisitationForm({
 
     // Validate required fields
     if (formData.familyMemberIds.length === 0) {
-      alert("Please select at least one family member");
+      toast.warning("Please select at least one family member");
       return;
     }
 

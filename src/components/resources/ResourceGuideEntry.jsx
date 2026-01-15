@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "../../contexts/ToastContext";
 import { updateResource, uploadResourceLogo, addBookmark, removeBookmark } from "../../firebase/firestore";
 import {
   getRegionNames,
@@ -99,6 +100,7 @@ const ORGANIZATION_TYPES = [
 
 export default function ResourceGuideEntry({ resource, isEditing: externalIsEditing, onEditingChange }) {
   const { userRecord, user, bookmarks } = useAuth();
+  const toast = useToast();
   const [internalIsEditing, setInternalIsEditing] = useState(false);
   const [bookmarkSaving, setBookmarkSaving] = useState(false);
   const [showBookmarkTooltip, setShowBookmarkTooltip] = useState(false);
@@ -211,12 +213,12 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        toast.warning('Please select an image file');
         return;
       }
       // Validate file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
-        alert('Image must be less than 2MB');
+        toast.warning('Image must be less than 2MB');
         return;
       }
       setLogoFile(file);
@@ -257,7 +259,7 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
           newLogoUrl = await uploadResourceLogo(id, logoFile);
         } catch (uploadError) {
           console.error("Error uploading logo:", uploadError);
-          alert("Failed to upload logo. Please try again.");
+          toast.error("Failed to upload logo. Please try again.");
           setUploadingLogo(false);
           setSaving(false);
           return;
@@ -287,9 +289,10 @@ export default function ResourceGuideEntry({ resource, isEditing: externalIsEdit
       handleClearLogo();
 
       setIsEditing(false);
+      toast.success("Changes saved");
     } catch (error) {
       console.error("Error saving resource:", error);
-      alert("Failed to save changes. Please try again.");
+      toast.error("Failed to save changes. Please try again.");
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast, useConfirm } from "../contexts/ToastContext";
 import { getCases, createCase, updateCase } from "../firebase/firestore";
 import FamilyMemberForm from "../components/cases/FamilyMemberForm";
 import CaseNoteForm from "../components/cases/CaseNoteForm";
@@ -297,6 +298,8 @@ function VisitationCard({
 export default function CaseManagement() {
   const navigate = useNavigate();
   const { userRecord, hasCaseAccess } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -424,9 +427,10 @@ export default function CaseManagement() {
         otherAgencies,
       });
       setEditingCaseInfo(false);
+      toast.success("Case info saved");
     } catch (err) {
       console.error("Error saving case info:", err);
-      setError("Failed to save case info");
+      toast.error("Failed to save case info");
     } finally {
       setActionLoading(false);
     }
@@ -444,9 +448,10 @@ export default function CaseManagement() {
         caseIssues,
       });
       setEditingIssues(false);
+      toast.success("Case issues saved");
     } catch (err) {
       console.error("Error saving case issues:", err);
-      setError("Failed to save case issues");
+      toast.error("Failed to save case issues");
     } finally {
       setActionLoading(false);
     }
@@ -504,23 +509,36 @@ export default function CaseManagement() {
       setCaseData({ ...caseData, familyMembers: updatedMembers });
       setShowMemberForm(false);
       setEditingMember(null);
+      toast.success(editingMember ? "Family member updated" : "Family member added");
     } catch (err) {
       console.error("Error saving family member:", err);
-      setError("Failed to save family member");
+      toast.error("Failed to save family member");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDeleteMember = async (memberId) => {
+    const member = caseData.familyMembers.find((m) => m.id === memberId);
+    const confirmed = await confirm({
+      title: "Remove Family Member",
+      message: `Are you sure you want to remove ${member?.firstName || "this family member"} from the case?`,
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       setActionLoading(true);
       const updatedMembers = caseData.familyMembers.filter((m) => m.id !== memberId);
       await updateCase(userRecord.id, caseData.id, { familyMembers: updatedMembers });
       setCaseData({ ...caseData, familyMembers: updatedMembers });
+      toast.success("Family member removed");
     } catch (err) {
       console.error("Error deleting family member:", err);
-      setError("Failed to delete family member");
+      toast.error("Failed to delete family member");
     } finally {
       setActionLoading(false);
     }
@@ -541,23 +559,35 @@ export default function CaseManagement() {
       await updateCase(userRecord.id, caseData.id, { notes: updatedNotes });
       setCaseData({ ...caseData, notes: updatedNotes });
       setShowNoteForm(false);
+      toast.success("Note added");
     } catch (err) {
       console.error("Error adding note:", err);
-      setError("Failed to add note");
+      toast.error("Failed to add note");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDeleteNote = async (noteId) => {
+    const confirmed = await confirm({
+      title: "Delete Note",
+      message: "Are you sure you want to delete this note?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       setActionLoading(true);
       const updatedNotes = (caseData.notes || []).filter((n) => n.id !== noteId);
       await updateCase(userRecord.id, caseData.id, { notes: updatedNotes });
       setCaseData({ ...caseData, notes: updatedNotes });
+      toast.success("Note deleted");
     } catch (err) {
       console.error("Error deleting note:", err);
-      setError("Failed to delete note");
+      toast.error("Failed to delete note");
     } finally {
       setActionLoading(false);
     }
@@ -614,23 +644,36 @@ export default function CaseManagement() {
       setCaseData({ ...caseData, contacts: updatedContacts });
       setShowContactForm(false);
       setEditingContact(null);
+      toast.success(editingContact?.id ? "Contact updated" : "Contact added");
     } catch (err) {
       console.error("Error saving contact:", err);
-      setError("Failed to save contact");
+      toast.error("Failed to save contact");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDeleteContact = async (contactId) => {
+    const contact = (caseData.contacts || []).find((c) => c.id === contactId);
+    const confirmed = await confirm({
+      title: "Remove Contact",
+      message: `Are you sure you want to remove ${contact?.name || "this contact"} from the case?`,
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       setActionLoading(true);
       const updatedContacts = (caseData.contacts || []).filter((c) => c.id !== contactId);
       await updateCase(userRecord.id, caseData.id, { contacts: updatedContacts });
       setCaseData({ ...caseData, contacts: updatedContacts });
+      toast.success("Contact removed");
     } catch (err) {
       console.error("Error deleting contact:", err);
-      setError("Failed to delete contact");
+      toast.error("Failed to delete contact");
     } finally {
       setActionLoading(false);
     }
@@ -675,26 +718,35 @@ export default function CaseManagement() {
       setCaseData({ ...caseData, visitations: updatedVisitations });
       setShowVisitationForm(false);
       setEditingVisitation(null);
+      toast.success(editingVisitation ? "Visitation updated" : "Visitation added");
     } catch (err) {
       console.error("Error saving visitation:", err);
-      setError("Failed to save visitation");
+      toast.error("Failed to save visitation");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDeleteVisitation = async (visitationId) => {
-    if (!window.confirm("Are you sure you want to delete this visitation record? This will also remove all log entries.")) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Delete Visitation",
+      message: "Are you sure you want to delete this visitation record? This will also remove all log entries.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       setActionLoading(true);
       const updatedVisitations = (caseData.visitations || []).filter((v) => v.id !== visitationId);
       await updateCase(userRecord.id, caseData.id, { visitations: updatedVisitations });
       setCaseData({ ...caseData, visitations: updatedVisitations });
+      toast.success("Visitation deleted");
     } catch (err) {
       console.error("Error deleting visitation:", err);
-      setError("Failed to delete visitation");
+      toast.error("Failed to delete visitation");
     } finally {
       setActionLoading(false);
     }
@@ -723,15 +775,26 @@ export default function CaseManagement() {
       setCaseData({ ...caseData, visitations: updatedVisitations });
       setShowVisitationLogForm(false);
       setSelectedVisitationForLog(null);
+      toast.success("Log entry added");
     } catch (err) {
       console.error("Error adding log entry:", err);
-      setError("Failed to add log entry");
+      toast.error("Failed to add log entry");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDeleteLogEntry = async (visitationId, logEntryId) => {
+    const confirmed = await confirm({
+      title: "Delete Log Entry",
+      message: "Are you sure you want to delete this log entry?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+
+    if (!confirmed) return;
+
     try {
       setActionLoading(true);
       const updatedVisitations = (caseData.visitations || []).map((v) => {
@@ -747,9 +810,10 @@ export default function CaseManagement() {
 
       await updateCase(userRecord.id, caseData.id, { visitations: updatedVisitations });
       setCaseData({ ...caseData, visitations: updatedVisitations });
+      toast.success("Log entry deleted");
     } catch (err) {
       console.error("Error deleting log entry:", err);
-      setError("Failed to delete log entry");
+      toast.error("Failed to delete log entry");
     } finally {
       setActionLoading(false);
     }
@@ -1001,18 +1065,6 @@ export default function CaseManagement() {
             Track case information, family members, and notes
           </p>
         </div>
-
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
-            {error}
-            <button
-              onClick={() => setError(null)}
-              className="ml-2 underline hover:no-underline"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
 
         {loading ? (
           <div className="text-center text-gray-600 py-12">Loading case data...</div>
