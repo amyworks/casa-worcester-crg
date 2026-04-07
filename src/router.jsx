@@ -15,6 +15,7 @@ import SavedResources from "./pages/SavedResources";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import CaseManagement from "./pages/CaseManagement";
+import UserGuide from "./pages/UserGuide";
 
 export const router = createBrowserRouter([
   {
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
       { path: "terms", element: <Terms /> },
       { path: "privacy", element: <Privacy /> },
       { path: "my-case", element: <CaseManagement /> }, // /my-case (CASA volunteers with assigned case)
+      { path: "user-guide", element: <UserGuide /> }, // /user-guide (help documentation)
     ],
   },
 ]);
