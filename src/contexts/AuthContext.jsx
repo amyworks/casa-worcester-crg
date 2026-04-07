@@ -118,8 +118,8 @@ export function AuthProvider({ children }) {
     canEditResource,
     // Bookmarks
     bookmarks: userRecord?.bookmarks || [],
-    // Case management access (CASA volunteers with assigned cases)
-    hasCaseAccess: userRecord?.isApproved && userRecord?.isCasaVolunteer && userRecord?.hasAssignedCase,
+    // Case management access — temporarily disabled for all users
+    hasCaseAccess: false,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

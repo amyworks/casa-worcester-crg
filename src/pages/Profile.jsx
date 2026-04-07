@@ -324,32 +324,7 @@ export default function Profile() {
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-brand-blue"
                   />
                 </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="hasAssignedCase"
-                    checked={formData.hasAssignedCase}
-                    onChange={(e) => setFormData({ ...formData, hasAssignedCase: e.target.checked })}
-                    className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
-                  />
-                  <label htmlFor="hasAssignedCase" className="text-brand-blueDark font-medium">
-                    I am currently assigned to a case
-                  </label>
-                </div>
-                {formData.hasAssignedCase && (
-                  <div>
-                    <label className="block text-[14px] font-semibold text-brand-blueDark mb-1">
-                      Case Name/Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.assignedCaseName}
-                      onChange={(e) => setFormData({ ...formData, assignedCaseName: e.target.value })}
-                      placeholder="Case identifier"
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-brand-blue"
-                    />
-                  </div>
-                )}
+                {/* Assigned case fields — temporarily disabled */}
               </div>
             )}
 
