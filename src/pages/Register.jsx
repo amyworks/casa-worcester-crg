@@ -300,34 +300,7 @@ export default function Register() {
                     />
                   </div>
 
-                  {/* Assigned Case */}
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.hasAssignedCase}
-                        onChange={(e) => setFormData({ ...formData, hasAssignedCase: e.target.checked })}
-                        className="h-4 w-4 border-gray-300 text-brand-red focus:ring-brand-red rounded"
-                      />
-                      <span className="text-sm text-gray-700">I am currently assigned to a case</span>
-                    </label>
-
-                    {formData.hasAssignedCase && (
-                      <div className="mt-2">
-                        <label htmlFor="assignedCaseName" className="block text-sm font-medium text-gray-700 mb-1">
-                          Case name or identifier
-                        </label>
-                        <input
-                          type="text"
-                          id="assignedCaseName"
-                          value={formData.assignedCaseName}
-                          onChange={(e) => setFormData({ ...formData, assignedCaseName: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                          placeholder="Case name or number"
-                        />
-                      </div>
-                    )}
-                  </div>
+                  {/* Assigned Case — temporarily disabled */}
                 </div>
               )}
 
