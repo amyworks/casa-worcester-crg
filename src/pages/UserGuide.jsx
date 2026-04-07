@@ -6,7 +6,6 @@ import {
   MagnifyingGlassIcon,
   BookmarkIcon,
   UserCircleIcon,
-  FolderIcon,
   ShieldCheckIcon,
   QuestionMarkCircleIcon,
   ChevronUpIcon,
@@ -18,7 +17,8 @@ const SECTIONS = [
   { id: "browsing-resources", title: "Browsing Resources", icon: MagnifyingGlassIcon },
   { id: "saving-resources", title: "Saving Resources", icon: BookmarkIcon },
   { id: "your-profile", title: "Your Profile", icon: UserCircleIcon },
-  { id: "case-management", title: "Case Management", icon: FolderIcon },
+  // Case management temporarily disabled
+  // { id: "case-management", title: "Case Management", icon: FolderIcon },
   { id: "staff-features", title: "Staff Features", icon: ShieldCheckIcon },
   { id: "faq", title: "Frequently Asked Questions", icon: QuestionMarkCircleIcon },
 ];
@@ -62,7 +62,7 @@ function Tip({ children }) {
 
 export default function UserGuide() {
   const location = useLocation();
-  const { user, userRecord, hasCaseAccess, isAdmin } = useAuth();
+  const { user, userRecord, isAdmin } = useAuth();
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   // Scroll to section if hash is present
@@ -250,73 +250,7 @@ export default function UserGuide() {
           affiliation and grant access.
         </Paragraph>
 
-        {/* Case Management */}
-        <SectionHeading id="case-management" title="Case Management" icon={FolderIcon} />
-
-        {hasCaseAccess ? (
-          <>
-            <Paragraph>
-              As a CASA volunteer with an assigned case, you have access to the Case Management
-              feature to help organize your case information.
-            </Paragraph>
-
-            <SubHeading>Family Members</SubHeading>
-            <Paragraph>
-              Track information about family members involved in your case:
-            </Paragraph>
-            <BulletList items={[
-              "Add family members with their role (parent, child, etc.), age, and gender",
-              "For children: track placement, school, and developmental information",
-              "For adults: track housing, employment, and agency involvement",
-              "Record strengths and treatment services for each person",
-            ]} />
-
-            <SubHeading>Case Contacts</SubHeading>
-            <Paragraph>
-              Keep track of important contacts for your case:
-            </Paragraph>
-            <BulletList items={[
-              "Required contacts: Judge, DCF Social Worker, CASA Supervisor",
-              "Additional contacts: Therapists, teachers, mentors, attorneys, etc.",
-              "Store names, phone numbers, emails, and organizations",
-            ]} />
-
-            <SubHeading>Visitation Arrangements</SubHeading>
-            <Paragraph>
-              Document visitation schedules and changes:
-            </Paragraph>
-            <BulletList items={[
-              "Track parental, sibling, and kinship visitation",
-              "Record frequency, supervision level, and location",
-              "Log changes with dates and reasons",
-              "Note behavioral observations related to visitation",
-            ]} />
-
-            <SubHeading>Case Notes</SubHeading>
-            <Paragraph>
-              Keep detailed notes organized by type:
-            </Paragraph>
-            <BulletList items={[
-              "Case updates and changes",
-              "Recent visit observations",
-              "Contact logs",
-              "Recommendations",
-              "Court report summaries",
-              "Supervision meeting notes",
-            ]} />
-
-            <Tip>
-              All case information is stored securely and is only accessible to you.
-              No case numbers or full names are required - use first names only to protect privacy.
-            </Tip>
-          </>
-        ) : (
-          <Paragraph>
-            Case Management is available to CASA volunteers who have been assigned a case.
-            If you're a CASA volunteer and need access to this feature, please contact your
-            CASA supervisor to have your account updated.
-          </Paragraph>
-        )}
+        {/* Case Management -temporarily disabled */}
 
         {/* Staff Features */}
         <SectionHeading id="staff-features" title="Staff Features" icon={ShieldCheckIcon} />
@@ -359,8 +293,15 @@ export default function UserGuide() {
 
         <SubHeading>How do I report an error in a resource listing?</SubHeading>
         <Paragraph>
-          If you find incorrect information for a resource, please contact your CASA supervisor
-          or email the organization directly. Staff members with edit access can update the listing.
+          If you find incorrect information for a resource, please contact:
+        </Paragraph>
+        <BulletList items={[
+          <><span className="font-semibold">Gloriann Switzer</span> <a href="mailto:gswitzer@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">gswitzer@thecasaproject.org</a></>,
+          <><span className="font-semibold">Kendra Mensah</span> <a href="mailto:kmensah@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">kmensah@thecasaproject.org</a></>,
+          <><span className="font-semibold">Amy Coleman</span> <a href="mailto:acoleman@fxmtechgroup.com" className="text-brand-blue hover:text-brand-red underline">acoleman@fxmtechgroup.com</a></>,
+        ]} />
+        <Paragraph>
+          Staff members with edit access can also update the listing directly.
         </Paragraph>
 
         <SubHeading>Can I access the Resource Guide on my phone?</SubHeading>
@@ -372,27 +313,32 @@ export default function UserGuide() {
         <SubHeading>How do I add a new resource?</SubHeading>
         <Paragraph>
           Only approved contributors, managers, and administrators can add new resources.
-          If you'd like to suggest a resource be added, contact a staff member or submit
-          an access request if you need to add resources regularly.
+          If you'd like to suggest a resource be added, contact:
         </Paragraph>
-
-        <SubHeading>Is my case information secure?</SubHeading>
-        <Paragraph>
-          Yes. Case information is stored securely and is only accessible to your account.
-          We use Firebase's security infrastructure, and the app is designed to minimize
-          sensitive data - only first names are used, and no case numbers are stored.
-        </Paragraph>
+        <BulletList items={[
+          <><span className="font-semibold">Gloriann Switzer</span> <a href="mailto:gswitzer@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">gswitzer@thecasaproject.org</a></>,
+          <><span className="font-semibold">Kendra Mensah</span> <a href="mailto:kmensah@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">kmensah@thecasaproject.org</a></>,
+        ]} />
 
         <SubHeading>Who do I contact for help?</SubHeading>
-        <Paragraph>
-          For questions about using the Resource Guide, contact your CASA supervisor.
-          For technical issues with the application, contact CASA Worcester.
-        </Paragraph>
+        <Paragraph>Resource suggestions or corrections:</Paragraph>
+        <BulletList items={[
+          <><span className="font-semibold">Gloriann Switzer</span> <a href="mailto:gswitzer@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">gswitzer@thecasaproject.org</a></>,
+          <><span className="font-semibold">Kendra Mensah</span> <a href="mailto:kmensah@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">kmensah@thecasaproject.org</a></>,
+        ]} />
+        <Paragraph>Technical issues or account questions:</Paragraph>
+        <BulletList items={[
+          <><span className="font-semibold">Kendra Mensah</span> <a href="mailto:kmensah@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">kmensah@thecasaproject.org</a></>,
+          <><span className="font-semibold">Amy Coleman</span> <a href="mailto:acoleman@fxmtechgroup.com" className="text-brand-blue hover:text-brand-red underline">acoleman@fxmtechgroup.com</a></>,
+        ]} />
 
         {/* Bottom spacing */}
         <div className="mt-12 pt-8 border-t border-gray-200">
           <p className="text-center text-gray-500 text-sm">
-            Need more help? Contact your CASA supervisor or reach out to CASA Worcester.
+            Need more help? Contact us:<br />
+            <span className="font-semibold">Gloriann Switzer</span> <a href="mailto:gswitzer@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">gswitzer@thecasaproject.org</a><br />
+            <span className="font-semibold">Kendra Mensah</span> <a href="mailto:kmensah@thecasaproject.org" className="text-brand-blue hover:text-brand-red underline">kmensah@thecasaproject.org</a><br />
+            <span className="font-semibold">Amy Coleman</span> <a href="mailto:acoleman@fxmtechgroup.com" className="text-brand-blue hover:text-brand-red underline">acoleman@fxmtechgroup.com</a>
           </p>
         </div>
       </div>
