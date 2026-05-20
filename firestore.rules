@@ -7,16 +7,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper: Check if user is admin
+    // Helper: Check if user is admin (superadmin inherits admin perms)
     function isAdmin() {
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['superadmin', 'admin'];
     }
 
-    // Helper: Check if user has edit permissions (admin, contributor, or manager)
+    // Helper: Check if user has edit permissions (superadmin, admin, contributor, or manager)
     function canEditResources() {
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'contributor', 'manager'];
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['superadmin', 'admin', 'contributor', 'manager'];
     }
 
     // Resources - publicly readable, restricted write
