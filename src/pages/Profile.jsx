@@ -143,6 +143,7 @@ export default function Profile() {
   }
 
   const getRoleDisplay = (role) => {
+    if (role === "superadmin") return "Superadmin";
     if (role === "admin") return "Administrator";
     if (role === "contributor") return "Contributor";
     if (role === "manager") return "Manager";

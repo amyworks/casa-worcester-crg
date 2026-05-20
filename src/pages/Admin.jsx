@@ -649,6 +649,7 @@ export default function Admin() {
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-brand-blue"
                         >
+                          <option value="superadmin">Superadmin</option>
                           <option value="admin">Administrator</option>
                           <option value="contributor">Contributor</option>
                           <option value="manager">Manager</option>

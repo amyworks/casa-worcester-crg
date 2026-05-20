@@ -82,12 +82,12 @@ export function AuthProvider({ children }) {
   const canEditResource = (resource) => {
     if (!userRecord?.isApproved) return false;
 
-    // Superadmins can always edit
-    if (userRecord.role === "admin") return true;
+    // Superadmins and admins can always edit
+    if (["superadmin", "admin"].includes(userRecord.role)) return true;
 
     // If resource is locked
     if (resource?.isLocked) {
-      // Only assigned manager can edit (besides superadmin)
+      // Only assigned manager can edit (besides admins)
       if (userRecord.role === "manager" && resource.assignedManagerId === userRecord.id) {
         return true;
       }
@@ -104,7 +104,9 @@ export function AuthProvider({ children }) {
     user,
     userRecord,
     loading,
-    isAdmin: userRecord?.role === "admin" && userRecord?.isApproved,
+    isSuperAdmin: userRecord?.role === "superadmin" && userRecord?.isApproved,
+    // isAdmin is true for both superadmins and admins (superadmin inherits admin perms)
+    isAdmin: ["superadmin", "admin"].includes(userRecord?.role) && userRecord?.isApproved,
     isContributor: userRecord?.role === "contributor" && userRecord?.isApproved,
     isManager: userRecord?.role === "manager" && userRecord?.isApproved,
     // isBasicUser covers all non-privileged roles (for permission checks)
@@ -112,14 +114,14 @@ export function AuthProvider({ children }) {
     // Legacy alias
     isVolunteer: basicUserRoles.includes(userRecord?.role) && userRecord?.isApproved,
     isApproved: userRecord?.isApproved || false,
-    // Helper to check if user can edit resources (admin, manager, or contributor)
-    canEditResources: userRecord?.isApproved && ["admin", "manager", "contributor"].includes(userRecord?.role),
+    // Helper to check if user can edit resources (superadmin, admin, manager, or contributor)
+    canEditResources: userRecord?.isApproved && ["superadmin", "admin", "manager", "contributor"].includes(userRecord?.role),
     // Helper to check if user can edit a specific resource (considers locking)
     canEditResource,
     // Bookmarks
     bookmarks: userRecord?.bookmarks || [],
-    // Case management access — temporarily disabled for all users
-    hasCaseAccess: false,
+    // Case management access - superadmin only
+    hasCaseAccess: userRecord?.isApproved && userRecord?.role === "superadmin",
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

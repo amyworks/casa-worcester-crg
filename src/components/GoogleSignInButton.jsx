@@ -54,7 +54,7 @@ export default function GoogleSignInButton() {
         } else {
           // User is approved, redirect to browse or admin based on role
           console.log("User approved, redirecting based on role:", userRecord.role);
-          if (userRecord.role === "admin") {
+          if (["superadmin", "admin"].includes(userRecord.role)) {
             navigate("/admin");
           } else {
             navigate("/browse");

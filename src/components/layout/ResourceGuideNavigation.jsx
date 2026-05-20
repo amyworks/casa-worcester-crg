@@ -20,12 +20,10 @@ export default function ResourceGuideNavigation({ open, onClose, user, userRecor
 
   // Check if user can access admin panel
   const canAccessAdmin = userRecord?.isApproved &&
-    ["admin", "manager", "contributor"].includes(userRecord?.role);
+    ["superadmin", "admin", "manager", "contributor"].includes(userRecord?.role);
 
-  // Check if user can access case management (CASA volunteers with assigned cases)
-  const hasCaseAccess = userRecord?.isApproved &&
-    userRecord?.isCasaVolunteer &&
-    userRecord?.hasAssignedCase;
+  // Case management access - superadmin only
+  const hasCaseAccess = userRecord?.isApproved && userRecord?.role === "superadmin";
 
   if (!open) return null;
 
